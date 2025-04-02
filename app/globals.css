@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 3%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 3%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 0 0% 14.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 14.9%;
+  --muted-foreground: 0 0% 63.9%;
+  --accent: 0 0% 14.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 0% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 14.9%;
+  --input: 0 0% 14.9%;
+  --ring: 0 0% 83.9%;
+}
+
+body {
+  @apply bg-background text-foreground font-mono;
+}
+
+/* Ensure complete desaturation */
+.bg-purple-900\/50,
+.bg-red-900\/50,
+.bg-blue-900\/50,
+.bg-gray-900,
+.bg-gray-800 {
+  @apply bg-black;
+}
+
+.from-gray-900,
+.to-gray-900,
+.from-gray-800,
+.to-gray-800,
+.from-gray-700,
+.to-gray-700 {
+  @apply from-black to-black;
+}
+
+.bg-gray-900\/50,
+.bg-gray-900\/30,
+.bg-gray-800\/50,
+.bg-gray-800\/30,
+.bg-gray-700\/50,
+.bg-gray-700\/30 {
+  @apply bg-black/50;
+}
+
+.text-purple-300,
+.text-red-300,
+.text-blue-300 {
+  @apply text-gray-300;
+}
+
+/* Preserve yellow text */
+.text-yellow-300,
+.text-yellow-300\/90 {
+  color: rgba(253, 224, 71, 0.9);
+}
+
+.text-yellow-600,
+.text-yellow-600\/70 {
+  color: rgba(202, 138, 4, 0.7);
+}
+
+/* ReactFlow styling */
+.react-flow__node {
+  @apply shadow-none;
+}
+
+.react-flow__handle {
+  @apply w-2 h-2 border-gray-700;
+}
+
+.react-flow__edge-path {
+  @apply stroke-gray-600;
+}
+
+/* Hide checkmarks from select items */
+[data-radix-collection-item] > svg {
+  display: none !important;
+}
+
+[role="option"] svg {
+  display: none !important;
+}
+
+[role="option"] {
+  padding-left: 8px !important;
+}
+

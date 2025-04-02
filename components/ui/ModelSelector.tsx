@@ -136,14 +136,6 @@ export default function ModelSelector({
 
   return (
     <div className={className}>
-      {data?.content && (
-        <div className="text-[9px] text-gray-300 mb-3 font-mono tracking-wide border-b border-gray-800/50 pb-2 line-clamp-2">
-          {typeof data.content === "string"
-            ? data.content.substring(0, 100) + (data.content.length > 100 ? "..." : "")
-            : ""}
-        </div>
-      )}
-
       <div className="space-y-2">{renderSettings()}</div>
     </div>
   )

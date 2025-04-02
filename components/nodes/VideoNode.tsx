@@ -32,6 +32,7 @@ function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
   const [isDragging, setIsDragging] = useState(false)
   const [showImageSelector, setShowImageSelector] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
+
   const { savedImages, addImage } = useContext(ImageLibraryContext)
   const { setNodes, getNodes, getNode, getEdges } = useReactFlow()
   const { handleInputInteraction } = useFlowchart()
@@ -179,27 +180,36 @@ function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
       if (textNode && textNode.type === "analysis") {
         setConnectedTextNode(textEdge.source)
         const textContent = textNode.data?.content || ""
-        setTextPreview(textContent.length > 30 ? textContent.substring(0, 30) + "..." : textContent)
+        setTextPreview(textContent.length > 25 ? textContent.substring(0, 25) + "..." : textContent)
       }
     } else {
       setConnectedTextNode(null)
       setTextPreview("")
     }
 
-    // Find connected image node
-    const imageEdge = edges.find((edge) => edge.target === id && edge.targetHandle === "video-image-input")
+    // Find connected image node - check for both specific handle and any connection from image nodes
+    const imageEdge = edges.find(
+      (edge) =>
+        (edge.target === id && edge.targetHandle === "video-image-input") ||
+        (edge.target === id && !edge.targetHandle && getNode(edge.source)?.type?.includes("image")),
+    )
 
     if (imageEdge) {
       const imageNode = getNode(imageEdge.source)
-      if (imageNode && (imageNode.type === "image" || imageNode.type === "text-to-image")) {
+      if (
+        imageNode &&
+        (imageNode.type === "image" || imageNode.type === "text-to-image" || imageNode.type.includes("image"))
+      ) {
         setConnectedImageNode(imageEdge.source)
-        setImagePreview(imageNode.data?.imageUrl || null)
+        const imageUrl = imageNode.data?.imageUrl || null
+        setImagePreview(imageUrl)
+        console.log("Connected image node found:", imageNode.id, imageNode.type, imageUrl)
       }
     } else {
       setConnectedImageNode(null)
       setImagePreview(null)
     }
-  }, [getEdges, getNode, id])
+  }, [getEdges, getNode, id, data._lastUpdated])
 
   return (
     <div
@@ -329,11 +339,10 @@ function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
                 )}
               </>
             )}
-            {textPreview && !showVideo && (
-              <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/70 text-yellow-300 text-[9px] font-mono tracking-wide">
-                {textPreview}
-              </div>
-            )}
+
+            <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/70 text-yellow-300 text-[9px] font-mono tracking-wide">
+              {connectedTextNode && textPreview ? textPreview : "Connect Prompt node"}
+            </div>
           </div>
 
           <div className="space-y-1 pt-1 border-t border-gray-800/50">

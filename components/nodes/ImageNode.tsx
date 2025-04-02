@@ -167,7 +167,6 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                     data: {
                       ...node.data,
                       sourceNodeContent: sourceContent,
-                      caption: null, // Ensure caption is removed
                     },
                   }
                 : node,

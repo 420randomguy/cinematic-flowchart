@@ -332,6 +332,18 @@ function FlowchartCanvasInner() {
           )
         }
 
+        // Force the target node to update by triggering a small change
+        setTimeout(() => {
+          setNodes((nds) =>
+            nds.map((node) => {
+              if (node.id === params.target) {
+                return { ...node, data: { ...node.data, _lastUpdated: Date.now() } }
+              }
+              return node
+            }),
+          )
+        }, 50)
+
         return
       }
 
@@ -361,6 +373,18 @@ function FlowchartCanvasInner() {
 
       // For all other connections, just add the edge
       setEdges((eds) => addEdge(params, eds))
+
+      // Force the target node to update by triggering a small change
+      setTimeout(() => {
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === params.target) {
+              return { ...node, data: { ...node.data, _lastUpdated: Date.now() } }
+            }
+            return node
+          }),
+        )
+      }, 50)
     },
     [nodes, saveState, setNodes, setEdges],
   )

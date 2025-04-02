@@ -25,6 +25,7 @@ import UserProfileButton from "@/components/ui/UserProfileButton"
 import { ImageLibraryProvider } from "@/contexts/ImageLibraryContext"
 import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
 import ImageToImageNode from "@/components/nodes/ImageToImageNode"
+import DebugPanel from "@/components/debug/debug-panel"
 
 /**
  * Node type definitions for the canvas
@@ -958,6 +959,9 @@ function FlowchartCanvasInner() {
       {cropImage && (
         <ImageCropModal imageUrl={cropImage.dataUrl} onComplete={handleCropComplete} onCancel={handleCropCancel} />
       )}
+
+      {/* Debug Panel */}
+      <DebugPanel />
     </div>
   )
 }

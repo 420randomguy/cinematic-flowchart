@@ -20,9 +20,18 @@ export interface BaseNodeData {
 
 export interface ImageNodeData extends BaseNodeData {
   imageFile?: File
+  textNodeId?: string
+  quality?: number
+  seed?: number
+  model?: string
 }
 
 export interface VideoNodeData extends BaseNodeData {
+  videoUrl?: string
+  textNodeId?: string
+  imageNodeId?: string
+  quality?: number
+  seed?: number
   modelId?: string
   modelSettings?: Record<string, any>
   onModelChange?: (modelId: string, settings: Record<string, any>) => void

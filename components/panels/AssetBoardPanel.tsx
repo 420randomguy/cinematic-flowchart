@@ -94,43 +94,43 @@ export default function AssetBoardPanel() {
   ]
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-4 flex justify-between items-center border-b border-gray-800">
-        <div className="text-sm font-medium text-white">Asset Board</div>
-        <Button variant="ghost" size="sm" className="text-white">
-          <Share className="h-4 w-4 mr-2" />
-          Share
+    <>
+      <div className="flex justify-between items-center p-4 border-b border-gray-800/50">
+        <div className="text-xs font-medium text-gray-300">Asset Board</div>
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-300">
+          <Share className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        <div className="p-4 space-y-6" id="asset-board">
-          {assetItems.map((item, index) => (
-            <div key={index} className="space-y-1" draggable="true" onDragStart={(e) => handleDragStart(e, item)}>
-              <div className="flex justify-between items-center">
-                <div className="text-xs uppercase text-gray-400">{item.title}</div>
-                <div className="text-[9px] uppercase bg-black text-gray-300 px-1.5 py-0.5 rounded-sm">{item.type}</div>
-              </div>
-              <div
-                className="relative aspect-video bg-black rounded overflow-hidden cursor-grab"
-                onClick={() => setSelectedImage({ src: item.src, alt: item.alt, title: item.title })}
-              >
-                <Image
-                  src={item.src || "/placeholder.svg"}
-                  alt={item.alt}
-                  width={600}
-                  height={400}
-                  className="object-cover"
-                />
-                {item.caption && (
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/50 text-yellow-300 text-xs">
-                    {item.caption}
-                  </div>
-                )}
-              </div>
+      <div
+        className="bg-black border border-gray-800/50 rounded-sm p-4 space-y-6 overflow-auto flex-1 h-[calc(100vh-45px)]"
+        id="asset-board"
+      >
+        {assetItems.map((item, index) => (
+          <div key={index} className="space-y-1" draggable="true" onDragStart={(e) => handleDragStart(e, item)}>
+            <div className="flex justify-between items-center">
+              <div className="text-xs uppercase text-gray-400">{item.title}</div>
+              <div className="text-[9px] uppercase bg-black text-gray-300 px-1.5 py-0.5 rounded-sm">{item.type}</div>
             </div>
-          ))}
-        </div>
+            <div
+              className="relative aspect-video bg-black rounded overflow-hidden cursor-grab"
+              onClick={() => setSelectedImage({ src: item.src, alt: item.alt, title: item.title })}
+            >
+              <Image
+                src={item.src || "/placeholder.svg"}
+                alt={item.alt}
+                width={600}
+                height={400}
+                className="object-cover"
+              />
+              {item.caption && (
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/50 text-yellow-300 text-xs">
+                  {item.caption}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Full-screen image dialog */}
@@ -162,7 +162,7 @@ export default function AssetBoardPanel() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
 

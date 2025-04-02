@@ -71,7 +71,12 @@ export default function UserProfileButton() {
           </div>
 
           {isLoggedIn ? (
-            <form onSubmit={handleSaveApiKey} className="space-y-4">
+            <form
+              onSubmit={handleSaveApiKey}
+              className="space-y-4"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="space-y-2">
                 <Label htmlFor="apiKey" className="text-sm text-gray-300">
                   fal.ai API Key
@@ -85,6 +90,9 @@ export default function UserProfileButton() {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Enter your fal.ai API key"
                     className="bg-black border-gray-800 text-white text-xs h-8"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
                   />
                 </div>
                 <p className="text-xs text-gray-500">Your API key is stored locally and never sent to our servers.</p>
@@ -109,7 +117,12 @@ export default function UserProfileButton() {
               </div>
             </form>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form
+              onSubmit={handleLogin}
+              className="space-y-4"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm text-gray-300">
                   Email
@@ -123,6 +136,9 @@ export default function UserProfileButton() {
                     placeholder="Enter your email"
                     className="bg-black border-gray-800 text-white text-xs h-8"
                     required
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
                   />
                 </div>
               </div>
@@ -140,6 +156,9 @@ export default function UserProfileButton() {
                     placeholder="Enter your password"
                     className="bg-black border-gray-800 text-white text-xs h-8"
                     required
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
                   />
                 </div>
               </div>

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import type { ImageNodeData } from "@/types"
 import { useNodeActions } from "@/hooks/useNodeActions"
 import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
+import { useFlowchart } from "@/contexts/FlowchartContext"
 
 /**
  * ImageToImageNode Component
@@ -33,6 +34,7 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
   const dropRef = useRef<HTMLDivElement>(null)
   const { savedImages, addImage } = useContext(ImageLibraryContext)
   const { setNodes } = useReactFlow()
+  const { handleInputInteraction } = useFlowchart()
 
   const { isSubmitting, timeRemaining, showResult, isGenerated, isNewNode, handleSubmitToggle } = useNodeActions({
     id,
@@ -165,7 +167,11 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
       {/* Submit button */}
       <div className="flex items-center justify-between border-t border-b border-gray-800/50 py-1.5 my-0.5">
         <Button
-          onClick={handleSubmitToggle}
+          onClick={(e) => {
+            e.stopPropagation()
+            handleInputInteraction(id)
+            handleSubmitToggle()
+          }}
           variant="outline"
           size="sm"
           disabled={!hasSourceImage}
@@ -210,7 +216,11 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={handleClick}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleInputInteraction(id)
+              handleClick()
+            }}
           >
             {data.imageUrl ? (
               <img
@@ -260,6 +270,18 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
             step={1}
             onValueChange={(value) => setQuality(value[0])}
             className="w-full h-1.5"
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              e.nativeEvent.stopImmediatePropagation()
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleInputInteraction(id)
+            }}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           />
 
           {/* Strength slider (specific to image-to-image) */}
@@ -274,6 +296,18 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
             step={1}
             onValueChange={(value) => setStrength(value[0])}
             className="w-full h-1.5"
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              e.nativeEvent.stopImmediatePropagation()
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleInputInteraction(id)
+            }}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
           />
 
           {/* Seed */}
@@ -286,7 +320,21 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
           <div className="flex justify-between items-center pt-1">
             <div className="text-[9px] uppercase text-gray-500 tracking-wide">SIZE</div>
             <Select defaultValue="1:1">
-              <SelectTrigger className="h-5 w-[60px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0">
+              <SelectTrigger
+                className="h-5 w-[60px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0"
+                onMouseDown={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleInputInteraction(id)
+                }}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onMouseMove={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
                 <SelectValue placeholder="1:1" />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-800 text-[9px] p-0 rounded-sm">
@@ -311,7 +359,12 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
 
           {/* Optional prompt text */}
           {data.content && (
-            <div className="text-[9px] text-yellow-300/90 mt-3 mb-1 font-mono tracking-wide border-t border-gray-800/50 pt-2 line-clamp-2">
+            <div
+              className="text-[9px] text-yellow-300/90 mt-3 mb-1 font-mono tracking-wide border-t border-gray-800/50 pt-2 line-clamp-2"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+            >
               {typeof data.content === "string"
                 ? data.content.substring(0, 100) + (data.content.length > 100 ? "..." : "")
                 : ""}
@@ -322,7 +375,21 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
           <div className="flex justify-end items-center pt-1.5">
             <div className="flex gap-1">
               <Dialog>
-                <DialogTrigger asChild>
+                <DialogTrigger
+                  asChild
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    e.nativeEvent.stopImmediatePropagation()
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleInputInteraction(id)
+                  }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onMouseMove={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   <button className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500">
                     <Maximize2 className="h-2.5 w-2.5" />
                   </button>
@@ -358,7 +425,11 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
                 <div
                   key={index}
                   className="aspect-video bg-gray-900 rounded overflow-hidden cursor-pointer hover:ring-1 hover:ring-yellow-300/50"
-                  onClick={() => selectImage(img)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleInputInteraction(id)
+                    selectImage(img)
+                  }}
                 >
                   <img
                     src={img || "/placeholder.svg"}
@@ -372,10 +443,41 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>)
             <div className="text-center text-gray-400 text-sm mb-3">No saved images yet</div>
           )}
 
-          <label className="mt-3 p-3 border border-dashed border-gray-700 rounded flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gray-800/30">
+          <label
+            className="mt-3 p-3 border border-dashed border-gray-700 rounded flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gray-800/30"
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              e.nativeEvent.stopImmediatePropagation()
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleInputInteraction(id)
+            }}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <ImageIcon className="h-5 w-5 text-gray-500" />
             <span className="text-xs text-gray-400">Upload a new image</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileUpload}
+              onMouseDown={(e) => {
+                e.stopPropagation()
+                e.nativeEvent.stopImmediatePropagation()
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleInputInteraction(id)
+              }}
+              onDoubleClick={(e) => e.stopPropagation()}
+              onMouseMove={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            />
           </label>
         </DialogContent>
       </Dialog>

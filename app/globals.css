@@ -85,6 +85,11 @@ body {
   @apply stroke-gray-600;
 }
 
+/* Hide ReactFlow attribution */
+.react-flow__attribution {
+  display: none !important;
+}
+
 /* Hide checkmarks from select items */
 [data-radix-collection-item] > svg {
   display: none !important;
@@ -96,5 +101,35 @@ body {
 
 [role="option"] {
   padding-left: 8px !important;
+}
+
+/* Utility class to prevent node dragging */
+.prevent-node-drag {
+  pointer-events: auto !important;
+}
+
+/* Make sure inputs and textareas inside nodes can be interacted with */
+.react-flow__node textarea,
+.react-flow__node input,
+.react-flow__node select,
+.react-flow__node button,
+.react-flow__node [role="combobox"],
+.react-flow__node [role="listbox"],
+.react-flow__node [role="option"] {
+  pointer-events: all !important;
+}
+
+/* Ensure the node itself doesn't receive drag events when interacting with inputs */
+.react-flow__node:has(textarea:focus),
+.react-flow__node:has(input:focus),
+.react-flow__node:has(select:focus),
+.react-flow__node:has([role="combobox"]:focus-within) {
+  pointer-events: none !important;
+}
+.react-flow__node:has(textarea:focus) *,
+.react-flow__node:has(input:focus) *,
+.react-flow__node:has(select:focus) *,
+.react-flow__node:has([role="combobox"]:focus-within) * {
+  pointer-events: auto !important;
 }
 

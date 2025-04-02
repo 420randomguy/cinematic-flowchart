@@ -7,6 +7,7 @@ import { Handle, Position, type NodeProps } from "reactflow"
 import { Slider } from "@/components/ui/slider"
 import { Maximize2, Download, Sparkles, Zap } from "lucide-react"
 import type { AnalysisNodeData } from "@/types"
+import { useFlowchart } from "@/contexts/FlowchartContext"
 
 /**
  * AnalysisNode Component
@@ -17,6 +18,7 @@ import type { AnalysisNodeData } from "@/types"
  * @returns {JSX.Element} The AnalysisNode component
  */
 function AnalysisNode({ data, isConnectable }: NodeProps<AnalysisNodeData>) {
+  const { handleInputInteraction } = useFlowchart()
   const [quality, setQuality] = useState(80)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(5) // 5 seconds for testing
@@ -130,10 +132,27 @@ function AnalysisNode({ data, isConnectable }: NodeProps<AnalysisNodeData>) {
             ref={textareaRef}
             value={promptText}
             onChange={handlePromptChange}
-            className="w-full min-h-[60px] bg-black text-[9px] text-gray-300 p-1.5 rounded-sm resize-none focus:outline-none focus:ring-1 focus:ring-gray-700 overflow-hidden"
+            className="w-full min-h-[60px] bg-black text-[9px] text-gray-300 p-1.5 rounded-sm resize-none focus:outline-none focus:ring-1 focus:ring-gray-700 overflow-hidden prevent-node-drag"
             placeholder="Enter your prompt here..."
             disabled={isSubmitting}
             style={{ height: "auto" }}
+            onMouseEnter={() => handleInputInteraction(true)}
+            onMouseLeave={() => handleInputInteraction(false)}
+            onFocus={() => handleInputInteraction(true)}
+            onBlur={() => handleInputInteraction(false)}
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              // Prevent ReactFlow from capturing this event for node dragging
+              e.nativeEvent.stopImmediatePropagation()
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            onCopy={(e) => e.stopPropagation()}
+            onCut={(e) => e.stopPropagation()}
+            onPaste={(e) => e.stopPropagation()}
           />
           <button className="absolute top-1 right-1 text-gray-400 hover:text-gray-300" title="AI suggestions">
             <Sparkles className="h-3 w-3" />

@@ -82,7 +82,7 @@ export default function DebugPanel() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 font-mono">
+    <div className="fixed bottom-4 right-4 z-50 font-mono">
       {/* Debug Button */}
       <TooltipProvider>
         <Tooltip>
@@ -96,7 +96,7 @@ export default function DebugPanel() {
               <Bug className="h-4 w-4 text-gray-400" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">
+          <TooltipContent side="left">
             <p>Debug Panel</p>
           </TooltipContent>
         </Tooltip>
@@ -104,7 +104,7 @@ export default function DebugPanel() {
 
       {/* Debug Panel */}
       {isOpen && (
-        <div className="absolute bottom-10 left-0 bg-black border border-gray-800 rounded-md shadow-lg p-3 w-64 text-xs">
+        <div className="absolute bottom-10 right-0 bg-black border border-gray-800 rounded-md shadow-lg p-3 w-64 text-xs">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-gray-300 font-medium">Debug Panel</h3>
             <Button

@@ -123,8 +123,23 @@ export function NodeContent({ data, isSubmitting, isGenerated, showVideo, childr
               className="object-cover w-full h-full"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-black/30 p-2 overflow-auto">
-              <div className="text-[9px] text-yellow-300/90 font-mono tracking-wide text-center">
+            <div
+              className="w-full h-full flex items-center justify-center bg-black/30 p-2 overflow-auto"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="text-[9px] text-yellow-300/90 mt-3 mb-1 font-mono tracking-wide border-t border-gray-800/50 pt-2 line-clamp-2"
+                onMouseDown={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onMouseMove={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
+              >
                 {displayContent || "Waiting for connected prompt..."}
               </div>
             </div>

@@ -13,6 +13,7 @@ import type { ImageNodeData } from "@/types"
 import { useNodeActions } from "@/hooks/useNodeActions"
 import { Button } from "@/components/ui/button"
 import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
+import { useFlowchart } from "@/contexts/FlowchartContext"
 
 /**
  * ImageNode Component
@@ -23,6 +24,7 @@ import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
  * @returns {JSX.Element} The ImageNode component
  */
 function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
+  const { handleInputInteraction } = useFlowchart()
   const [selectedModel, setSelectedModel] = useState("flux-dev")
   const imageModels = [
     { id: "flux-dev", name: "Flux Dev" },
@@ -146,12 +148,39 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
       className={`bg-black border border-gray-800/50 rounded-sm p-2.5 text-[10px] flex flex-col gap-1.5 max-w-[260px] font-mono relative shadow-sm ${isNewNode ? "animate-in fade-in slide-in-from-left-10 duration-300" : ""}`}
     >
       <div className="absolute -top-2 left-2 bg-gray-800 px-1.5 py-0.5 rounded-sm text-[8px] text-gray-300 uppercase tracking-wider">
-        IMAGE
+        TEXT-TO-IMAGE
       </div>
 
       <div className="absolute -top-2 right-2 z-20">
-        <Select value={selectedModel} onValueChange={setSelectedModel}>
-          <SelectTrigger className="h-5 w-[90px] bg-gray-800 border-0 text-[8px] text-gray-300 uppercase tracking-wider rounded-sm px-2 py-0">
+        <Select
+          value={selectedModel}
+          onValueChange={setSelectedModel}
+          onMouseEnter={() => handleInputInteraction(true)}
+          onMouseLeave={() => handleInputInteraction(false)}
+          onFocus={() => handleInputInteraction(true)}
+          onBlur={() => handleInputInteraction(false)}
+          onMouseDown={(e) => {
+            e.stopPropagation()
+            e.nativeEvent.stopImmediatePropagation()
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onMouseMove={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <SelectTrigger
+            className="h-5 w-[90px] bg-gray-800 border-0 text-[8px] text-gray-300 uppercase tracking-wider rounded-sm px-2 py-0"
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              e.nativeEvent.stopImmediatePropagation()
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <SelectValue placeholder="Select model" />
           </SelectTrigger>
           <SelectContent className="bg-gray-900 border-gray-700 text-[9px] p-0 rounded-sm">
@@ -160,6 +189,19 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                 key={model.id}
                 value={model.id}
                 className="text-[8px] py-1 px-2 text-gray-300 uppercase tracking-wider"
+                onMouseEnter={() => handleInputInteraction(true)}
+                onMouseLeave={() => handleInputInteraction(false)}
+                onFocus={() => handleInputInteraction(true)}
+                onBlur={() => handleInputInteraction(false)}
+                onMouseDown={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onMouseMove={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               >
                 {model.name}
               </SelectItem>
@@ -170,13 +212,23 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
 
       <div className="font-bold text-[10px] mb-0.5 text-gray-400 tracking-wide uppercase">{data.title}</div>
 
-      {/* Only input handle, no output handle for image nodes */}
+      {/* Visible input handle */}
       <Handle
         type="target"
         position={Position.Left}
         isConnectable={isConnectable}
         className="w-1.5 h-1.5 bg-gray-600 border-gray-600"
         style={{ top: "50%", left: -8 }}
+      />
+
+      {/* Hidden handle with ID for connection logic */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        isConnectable={isConnectable}
+        className="opacity-0 pointer-events-none"
+        style={{ top: "50%", left: -8 }}
+        id="image-input"
       />
 
       {/* Use standard Button instead of SubmitButton */}
@@ -192,6 +244,10 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                 ? "bg-gray-800/80 border-yellow-600/50 text-yellow-300 hover:border-yellow-500/70"
                 : "bg-gray-800/80 border-yellow-600/50 text-yellow-300 hover:border-yellow-500/70"
           }`}
+          onMouseEnter={() => handleInputInteraction(true)}
+          onMouseLeave={() => handleInputInteraction(false)}
+          onFocus={() => handleInputInteraction(true)}
+          onBlur={() => handleInputInteraction(false)}
         >
           {isSubmitting ? "Cancel" : isGenerated ? "Regenerate" : "Submit"}
         </Button>
@@ -225,7 +281,12 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                   className="object-cover w-full h-full"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-black/30 p-2 overflow-auto">
+                <div
+                  className="w-full h-full flex items-center justify-center bg-black/30 p-2 overflow-auto"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                >
                   <div className="text-[9px] text-yellow-300/90 font-mono tracking-wide text-center">
                     {displayContent || "Waiting for connected prompt..."}
                   </div>
@@ -241,6 +302,10 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={handleClick}
+                onMouseEnter={() => handleInputInteraction(true)}
+                onMouseLeave={() => handleInputInteraction(false)}
+                onFocus={() => handleInputInteraction(true)}
+                onBlur={() => handleInputInteraction(false)}
               >
                 {data.imageUrl ? (
                   <img
@@ -276,6 +341,19 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
               step={1}
               onValueChange={(value) => setQuality(value[0])}
               className="w-full h-1.5"
+              onMouseEnter={() => handleInputInteraction(true)}
+              onMouseLeave={() => handleInputInteraction(false)}
+              onFocus={() => handleInputInteraction(true)}
+              onBlur={() => handleInputInteraction(false)}
+              onMouseDown={(e) => {
+                e.stopPropagation()
+                e.nativeEvent.stopImmediatePropagation()
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+              onMouseMove={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
             />
 
             <div className="flex justify-between items-center pt-1">
@@ -286,24 +364,130 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
             {/* Add size selector */}
             <div className="flex justify-between items-center pt-1">
               <div className="text-[9px] uppercase text-gray-500 tracking-wide">SIZE</div>
-              <Select defaultValue="16:9">
-                <SelectTrigger className="h-5 w-[60px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0">
+              <Select
+                defaultValue="16:9"
+                onMouseEnter={() => handleInputInteraction(true)}
+                onMouseLeave={() => handleInputInteraction(false)}
+                onFocus={() => handleInputInteraction(true)}
+                onBlur={() => handleInputInteraction(false)}
+                onMouseDown={(e) => {
+                  e.stopPropagation()
+                  e.nativeEvent.stopImmediatePropagation()
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                onMouseMove={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <SelectTrigger
+                  className="h-5 w-[60px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0"
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    e.nativeEvent.stopImmediatePropagation()
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onMouseMove={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   <SelectValue placeholder="16:9" />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-900 border-gray-800 text-[9px] p-0 rounded-sm">
-                  <SelectItem value="16:9" className="text-[9px] py-1 px-2 text-gray-300">
+                  <SelectItem
+                    value="16:9"
+                    className="text-[9px] py-1 px-2 text-gray-300"
+                    onMouseEnter={() => handleInputInteraction(true)}
+                    onMouseLeave={() => handleInputInteraction(false)}
+                    onFocus={() => handleInputInteraction(true)}
+                    onBlur={() => handleInputInteraction(false)}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.nativeEvent.stopImmediatePropagation()
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onMouseMove={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     16:9
                   </SelectItem>
-                  <SelectItem value="9:16" className="text-[9px] py-1 px-2 text-gray-300">
+                  <SelectItem
+                    value="9:16"
+                    className="text-[9px] py-1 px-2 text-gray-300"
+                    onMouseEnter={() => handleInputInteraction(true)}
+                    onMouseLeave={() => handleInputInteraction(false)}
+                    onFocus={() => handleInputInteraction(true)}
+                    onBlur={() => handleInputInteraction(false)}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.nativeEvent.stopImmediatePropagation()
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onMouseMove={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     9:16
                   </SelectItem>
-                  <SelectItem value="3:4" className="text-[9px] py-1 px-2 text-gray-300">
+                  <SelectItem
+                    value="3:4"
+                    className="text-[9px] py-1 px-2 text-gray-300"
+                    onMouseEnter={() => handleInputInteraction(true)}
+                    onMouseLeave={() => handleInputInteraction(false)}
+                    onFocus={() => handleInputInteraction(true)}
+                    onBlur={() => handleInputInteraction(false)}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.nativeEvent.stopImmediatePropagation()
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onMouseMove={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     3:4
                   </SelectItem>
-                  <SelectItem value="4:3" className="text-[9px] py-1 px-2 text-gray-300">
+                  <SelectItem
+                    value="4:3"
+                    className="text-[9px] py-1 px-2 text-gray-300"
+                    onMouseEnter={() => handleInputInteraction(true)}
+                    onMouseLeave={() => handleInputInteraction(false)}
+                    onFocus={() => handleInputInteraction(true)}
+                    onBlur={() => handleInputInteraction(false)}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.nativeEvent.stopImmediatePropagation()
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onMouseMove={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     4:3
                   </SelectItem>
-                  <SelectItem value="1:1" className="text-[9px] py-1 px-2 text-gray-300">
+                  <SelectItem
+                    value="1:1"
+                    className="text-[9px] py-1 px-2 text-gray-300"
+                    onMouseEnter={() => handleInputInteraction(true)}
+                    onMouseLeave={() => handleInputInteraction(false)}
+                    onFocus={() => handleInputInteraction(true)}
+                    onBlur={() => handleInputInteraction(false)}
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      e.nativeEvent.stopImmediatePropagation()
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onMouseMove={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
                     1:1
                   </SelectItem>
                 </SelectContent>
@@ -323,7 +507,22 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
               <div className="flex gap-1">
                 <Dialog>
                   <DialogTrigger asChild>
-                    <button className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500">
+                    <button
+                      className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500"
+                      onMouseEnter={() => handleInputInteraction(true)}
+                      onMouseLeave={() => handleInputInteraction(false)}
+                      onFocus={() => handleInputInteraction(true)}
+                      onBlur={() => handleInputInteraction(false)}
+                      onMouseDown={(e) => {
+                        e.stopPropagation()
+                        e.nativeEvent.stopImmediatePropagation()
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      onMouseMove={(e) => e.stopPropagation()}
+                      onMouseUp={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
                       <Maximize2 className="h-2.5 w-2.5" />
                     </button>
                   </DialogTrigger>
@@ -339,7 +538,22 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                     </div>
                   </DialogContent>
                 </Dialog>
-                <button className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500">
+                <button
+                  className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500"
+                  onMouseEnter={() => handleInputInteraction(true)}
+                  onMouseLeave={() => handleInputInteraction(false)}
+                  onFocus={() => handleInputInteraction(true)}
+                  onBlur={() => handleInputInteraction(false)}
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    e.nativeEvent.stopImmediatePropagation()
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onMouseMove={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   <Download className="h-2.5 w-2.5" />
                 </button>
               </div>
@@ -360,6 +574,10 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                   key={index}
                   className="aspect-video bg-gray-900 rounded overflow-hidden cursor-pointer hover:ring-1 hover:ring-yellow-300/50"
                   onClick={() => selectImage(img)}
+                  onMouseEnter={() => handleInputInteraction(true)}
+                  onMouseLeave={() => handleInputInteraction(false)}
+                  onFocus={() => handleInputInteraction(true)}
+                  onBlur={() => handleInputInteraction(false)}
                 >
                   <img
                     src={img || "/placeholder.svg"}
@@ -373,10 +591,43 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
             <div className="text-center text-gray-400 text-sm mb-3">No saved images yet</div>
           )}
 
-          <label className="mt-3 p-3 border border-dashed border-gray-700 rounded flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gray-800/30">
+          <label
+            className="mt-3 p-3 border border-dashed border-gray-700 rounded flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-gray-800/30"
+            onMouseEnter={() => handleInputInteraction(true)}
+            onMouseLeave={() => handleInputInteraction(false)}
+            onFocus={() => handleInputInteraction(true)}
+            onBlur={() => handleInputInteraction(false)}
+            onMouseDown={(e) => {
+              e.stopPropagation()
+              e.nativeEvent.stopImmediatePropagation()
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onMouseMove={(e) => e.stopPropagation()}
+            onMouseUp={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <ImageIcon className="h-5 w-5 text-gray-500" />
             <span className="text-xs text-gray-400">Upload a new image</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileUpload}
+              onMouseEnter={() => handleInputInteraction(true)}
+              onMouseLeave={() => handleInputInteraction(false)}
+              onFocus={() => handleInputInteraction(true)}
+              onBlur={() => handleInputInteraction(false)}
+              onMouseDown={(e) => {
+                e.stopPropagation()
+                e.nativeEvent.stopImmediatePropagation()
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+              onMouseMove={(e) => e.stopPropagation()}
+              onMouseUp={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            />
           </label>
         </DialogContent>
       </Dialog>

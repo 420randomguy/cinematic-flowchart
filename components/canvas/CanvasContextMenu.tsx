@@ -16,7 +16,7 @@ import { FileText, ImageIcon, Video } from "lucide-react"
 interface CanvasContextMenuProps {
   position: { x: number; y: number; sourceNodeId?: string }
   onClose: () => void
-  onAddNode: (type: "analysis" | "image" | "video" | "image-to-image") => void
+  onAddNode: (type: "analysis" | "text-to-image" | "video" | "image-to-image" | "image") => void
   sourceNodeId?: string
 }
 
@@ -52,10 +52,10 @@ export default function CanvasContextMenu({ position, onClose, onAddNode, source
       {/* Always show Image and Video options */}
       <button
         className="w-full px-3 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 flex items-center gap-2"
-        onClick={() => onAddNode("image")}
+        onClick={() => onAddNode("text-to-image")}
       >
         <ImageIcon className="h-3 w-3 text-gray-400" />
-        <span>Image</span>
+        <span>Text-to-Image</span>
       </button>
       <button
         className="w-full px-3 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 flex items-center gap-2"
@@ -63,6 +63,13 @@ export default function CanvasContextMenu({ position, onClose, onAddNode, source
       >
         <ImageIcon className="h-3 w-3 text-gray-400" />
         <span>Image-to-Image</span>
+      </button>
+      <button
+        className="w-full px-3 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 flex items-center gap-2"
+        onClick={() => onAddNode("image")}
+      >
+        <ImageIcon className="h-3 w-3 text-gray-400" />
+        <span>Image</span>
       </button>
       <button
         className="w-full px-3 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 flex items-center gap-2"

@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useContext } from "react"
 
 import { useState, useCallback, useRef, useEffect } from "react"
@@ -17,6 +19,7 @@ import "reactflow/dist/style.css"
 import AnalysisNode from "@/components/nodes/analysis-node"
 import VideoNode from "@/components/nodes/VideoNode"
 import ImageNode from "@/components/nodes/ImageNode"
+import BasicImageNode from "@/components/nodes/BasicImageNode"
 import AssetBoardPanel from "@/components/panels/AssetBoardPanel"
 import CanvasContextMenu from "@/components/canvas/CanvasContextMenu"
 import CanvasToolbar from "@/components/controls/CanvasToolbar"
@@ -26,6 +29,7 @@ import { ImageLibraryProvider } from "@/contexts/ImageLibraryContext"
 import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
 import ImageToImageNode from "@/components/nodes/ImageToImageNode"
 import DebugPanel from "@/components/debug/debug-panel"
+import { FlowchartContext } from "@/contexts/FlowchartContext"
 
 /**
  * Node type definitions for the canvas
@@ -33,8 +37,9 @@ import DebugPanel from "@/components/debug/debug-panel"
 const nodeTypes = {
   analysis: AnalysisNode,
   video: VideoNode,
-  image: ImageNode,
-  "image-to-image": ImageToImageNode, // Add the new node type
+  "text-to-image": ImageNode,
+  "image-to-image": ImageToImageNode,
+  image: BasicImageNode,
 }
 
 /**
@@ -57,7 +62,7 @@ const initialNodes = [
   },
   {
     id: "2",
-    type: "image",
+    type: "text-to-image",
     position: { x: 450, y: 30 },
     data: {
       title: "CLOSE-UP OF A TEXTURED POEM PAGE, DIM...",
@@ -130,6 +135,7 @@ const initialEdges = [
     target: "3",
     animated: true,
     style: { stroke: "#444", strokeWidth: 1 },
+    targetHandle: "video-text-input",
   },
 ]
 
@@ -249,14 +255,38 @@ function FlowchartCanvasInner() {
    */
   const handleConnect = useCallback(
     (params) => {
-      // Only allow connections from prompt nodes to image/video nodes
+      // Save current state before adding a connection
+      saveState()
+
+      // Get source and target nodes
       const sourceNode = nodes.find((node) => node.id === params.source)
       const targetNode = nodes.find((node) => node.id === params.target)
 
-      if (sourceNode?.type === "analysis" && (targetNode?.type === "image" || targetNode?.type === "video")) {
-        // Save current state before connecting
-        saveState()
+      if (!sourceNode || !targetNode) return
 
+      // If connecting to a node without a specific handle, determine the appropriate handle
+      if (!params.targetHandle) {
+        // For video nodes, determine the appropriate target handle based on source node type
+        if (targetNode.type === "video") {
+          if (sourceNode.type === "analysis") {
+            params.targetHandle = "video-text-input"
+          } else if (
+            sourceNode.type === "image" ||
+            sourceNode.type === "text-to-image" ||
+            sourceNode.type === "image-to-image"
+          ) {
+            params.targetHandle = "video-image-input"
+          }
+        }
+
+        // For text-to-image nodes, if source is analysis, connect to the default input
+        if (targetNode.type === "text-to-image" && sourceNode.type === "analysis") {
+          params.targetHandle = "image-input"
+        }
+      }
+
+      // Handle connections to text-to-image nodes
+      if (targetNode.type === "text-to-image" && sourceNode.type === "analysis") {
         // Add the edge
         setEdges((eds) => addEdge(params, eds))
 
@@ -278,8 +308,75 @@ function FlowchartCanvasInner() {
 
         return
       }
+
+      // Handle connections to video nodes
+      if (targetNode.type === "video") {
+        // Add the edge
+        setEdges((eds) => addEdge(params, eds))
+
+        // If connecting text to video, update the video node with the text content
+        if (sourceNode.type === "analysis" && params.targetHandle === "video-text-input") {
+          setNodes((nds) =>
+            nds.map((node) => {
+              if (node.id === params.target) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    sourceNodeContent: sourceNode.data.content,
+                  },
+                }
+              }
+              return node
+            }),
+          )
+        }
+
+        return
+      }
+
+      // Handle connections to image nodes
+      if (sourceNode.type === "analysis" && (targetNode.type === "image" || targetNode.type === "image-to-image")) {
+        // Add the edge
+        setEdges((eds) => addEdge(params, eds))
+
+        // Update target node with source node's content
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === params.target) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  sourceNodeContent: sourceNode.data.content,
+                },
+              }
+            }
+            return node
+          }),
+        )
+
+        return
+      }
+
+      // For all other connections, just add the edge
+      setEdges((eds) => addEdge(params, eds))
     },
     [nodes, saveState, setNodes, setEdges],
+  )
+
+  /**
+   * Handle double-click on edge to delete it
+   */
+  const handleEdgeDoubleClick = useCallback(
+    (event, edge) => {
+      // Save current state before removing the edge
+      saveState()
+
+      // Remove the edge
+      setEdges((eds) => eds.filter((e) => e.id !== edge.id))
+    },
+    [saveState, setEdges],
   )
 
   /**
@@ -289,11 +386,8 @@ function FlowchartCanvasInner() {
     (event, { nodeId, handleType }) => {
       // Only track source connections from prompt nodes
       const sourceNode = nodes.find((node) => node.id === nodeId)
-      if (handleType === "source" && sourceNode?.type === "analysis") {
-        setSelectedNodeId(nodeId)
-      } else {
-        setSelectedNodeId(null) // Reset if not a valid source
-      }
+      const isValidSource = handleType === "source" && sourceNode?.type === "analysis"
+      setSelectedNodeId(isValidSource ? nodeId : null)
     },
     [nodes, setSelectedNodeId],
   )
@@ -369,7 +463,7 @@ function FlowchartCanvasInner() {
    */
   const handleAddNode = useCallback(
     (
-      type: "analysis" | "image" | "video" | "image-to-image",
+      type: "analysis" | "text-to-image" | "video" | "image-to-image" | "image",
       imageData?: { file: File; dataUrl: string },
       nodeData?: any,
     ) => {
@@ -393,11 +487,13 @@ function FlowchartCanvasInner() {
               title:
                 type === "analysis"
                   ? "PROMPT TITLE"
-                  : type === "image"
-                    ? "IMAGE TITLE"
+                  : type === "text-to-image"
+                    ? "TEXT-TO-IMAGE TITLE"
                     : type === "image-to-image"
                       ? "IMAGE-TO-IMAGE TITLE"
-                      : "VIDEO TITLE",
+                      : type === "image"
+                        ? "IMAGE TITLE"
+                        : "VIDEO TITLE",
               showImage: type !== "analysis",
               category: type === "analysis" ? "text" : type,
               seed: Math.floor(Math.random() * 1000000000).toString(),
@@ -417,17 +513,20 @@ function FlowchartCanvasInner() {
           // If we have a source node ID, create a connection
           if (contextMenu.sourceNodeId) {
             // Only connect if the source is a prompt and target is image/video/image-to-image
-            if (type === "image" || type === "video" || type === "image-to-image") {
+            if (type === "text-to-image" || type === "video" || type === "image-to-image" || type === "image") {
               const sourceNode = nodes.find((node) => node.id === contextMenu.sourceNodeId)
 
-              // Create the edge
+              // Create the edge with appropriate target handle for video nodes
               const newEdge = {
                 id: `e${contextMenu.sourceNodeId}-${newNodeId}`,
                 source: contextMenu.sourceNodeId,
                 target: newNodeId,
                 animated: true,
                 style: { stroke: "#444", strokeWidth: 1 },
+                // Add targetHandle for video nodes
+                ...(type === "video" ? { targetHandle: "video-text-input" } : {}),
               }
+
               setEdges((eds) => [...eds, newEdge])
 
               // Update the new node with the source node's content
@@ -755,50 +854,32 @@ function FlowchartCanvasInner() {
               // Create an image element to get dimensions
               const img = new Image()
               img.onload = () => {
-                const width = img.width
-                const height = img.height
-                const aspectRatio = width / height
+                // Save current state before adding a new node
+                saveState()
 
-                // Check if the aspect ratio matches any of our predefined ratios
-                const isStandardRatio =
-                  Math.abs(aspectRatio - 16 / 9) < 0.1 ||
-                  Math.abs(aspectRatio - 9 / 16) < 0.1 ||
-                  Math.abs(aspectRatio - 1) < 0.1
-
-                if (isStandardRatio) {
-                  // If it's a standard ratio, create the node directly
-                  saveState() // Save current state before adding a new node
-
-                  const newNodeId = `video_${Date.now()}`
-                  const newNode = {
-                    id: newNodeId,
-                    type: "video",
-                    position: project(position),
-                    data: {
-                      title: "DROPPED IMAGE",
-                      showImage: true,
-                      category: "video",
-                      seed: Math.floor(Math.random() * 1000000000).toString(),
-                      content: "",
-                      imageUrl: dataUrl,
-                      imageFile: file,
-                      isNewNode: true,
-                    },
-                    style: {
-                      width: 280,
-                    },
-                  }
-
-                  // Add the new node
-                  setNodes((nds) => [...nds, newNode])
-                } else {
-                  // If it's not a standard ratio, show the crop tool
-                  setCropImage({
-                    file,
-                    dataUrl,
-                    position: project(position),
-                  })
+                // Create a new image node
+                const newNodeId = `image_${Date.now()}`
+                const newNode = {
+                  id: newNodeId,
+                  type: "image",
+                  position: project(position),
+                  data: {
+                    title: "DROPPED IMAGE",
+                    showImage: true,
+                    category: "image",
+                    seed: Math.floor(Math.random() * 1000000000).toString(),
+                    content: "",
+                    imageUrl: dataUrl,
+                    imageFile: file,
+                    isNewNode: true,
+                  },
+                  style: {
+                    width: 280,
+                  },
                 }
+
+                // Add the new node
+                setNodes((nds) => [...nds, newNode])
               }
               img.src = dataUrl
               img.crossOrigin = "anonymous" // Add this to prevent CORS issues
@@ -845,7 +926,7 @@ function FlowchartCanvasInner() {
         }
       }
     },
-    [project, saveState, setNodes, addImage, setCropImage],
+    [project, saveState, setNodes, addImage],
   )
 
   /**
@@ -894,74 +975,117 @@ function FlowchartCanvasInner() {
     setCropImage(null)
   }, [setCropImage])
 
+  // Add a new state variable to track if we're interacting with an input:
+  const [isInteractingWithInput, setIsInteractingWithInput] = useState(false)
+
+  // Add this function before the return statement
+  const handleInputInteraction = useCallback((isInteracting = false) => {
+    setIsInteractingWithInput(isInteracting)
+  }, [])
+
+  // Add this function before the return statement
+  const handleNodeDragStart = useCallback((event: React.MouseEvent, node: any) => {
+    // Check if the event target is an input, textarea, or select
+    const target = event.target as HTMLElement
+    const isInput =
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT" ||
+      target.getAttribute("role") === "combobox" ||
+      target.getAttribute("role") === "listbox" ||
+      target.getAttribute("role") === "option" ||
+      target.classList.contains("prevent-node-drag")
+
+    if (isInput) {
+      // Prevent the drag from starting
+      event.preventDefault()
+      event.stopPropagation()
+      return false
+    }
+
+    return true
+  }, [])
+
   return (
     <div className="h-screen w-full flex flex-col bg-black font-mono">
-      <div className="flex-1 flex">
-        <div className="flex-1 relative" ref={canvasWrapperRef} onDragOver={handleDragOver} onDrop={handleDrop}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={handleConnect}
-            onConnectStart={handleConnectStart}
-            onConnectEnd={handleConnectEnd}
-            nodeTypes={nodeTypes}
-            fitView
-            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-            fitViewOptions={{
-              padding: 0.2,
-              includeHiddenNodes: false,
-              minZoom: 0.8,
-              maxZoom: 1.2,
-            }}
-            onContextMenu={handleContextMenu}
-            onPaneClick={handlePaneClick}
-            onNodeClick={handleNodeClick}
-            deleteKeyCode="Delete"
-            connectionLineType={ConnectionLineType.SmoothStep}
-            connectionLineStyle={{ stroke: "#444", strokeWidth: 1 }}
-          >
-            <Background color="#333" gap={16} />
+      <FlowchartContext.Provider value={{ handleInputInteraction }}>
+        <div className="flex-1 flex">
+          <div className="flex-1 relative" ref={canvasWrapperRef} onDragOver={handleDragOver} onDrop={handleDrop}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={handleConnect}
+              onConnectStart={handleConnectStart}
+              onConnectEnd={handleConnectEnd}
+              onEdgeDoubleClick={handleEdgeDoubleClick}
+              nodeTypes={nodeTypes}
+              fitView
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+              fitViewOptions={{
+                padding: 0.2,
+                includeHiddenNodes: false,
+                minZoom: 0.8,
+                maxZoom: 1.2,
+              }}
+              onContextMenu={handleContextMenu}
+              onPaneClick={handlePaneClick}
+              onNodeClick={handleNodeClick}
+              deleteKeyCode="Delete"
+              connectionLineType={ConnectionLineType.SmoothStep}
+              connectionLineStyle={{ stroke: "#444", strokeWidth: 1 }}
+              selectNodesOnDrag={false}
+              nodeDragThreshold={5}
+              selectionMode="partial"
+              zoomOnDoubleClick={false}
+              nodesDraggable={!isInteractingWithInput}
+              panOnDrag={!isInteractingWithInput}
+              onNodeDragStart={handleNodeDragStart}
+              connectOnClick={true}
+              edgesFocusable={true}
+            >
+              <Background color="#333" gap={16} />
 
-            {/* User Profile Button */}
-            <UserProfileButton />
+              {/* User Profile Button */}
+              <UserProfileButton />
 
-            {/* Canvas Toolbar */}
-            <CanvasToolbar
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-              onCopy={handleCopyNode}
-              onPaste={handlePasteNode}
-              isUndoAvailable={undoStack.length > 0}
-              isRedoAvailable={redoStack.length > 0}
-              isCopyAvailable={selectedNodeId !== null}
-              isPasteAvailable={clipboard !== null}
-            />
-
-            {/* Context Menu */}
-            {contextMenu && (
-              <CanvasContextMenu
-                position={contextMenu}
-                onClose={handleCloseContextMenu}
-                onAddNode={handleAddNode}
-                sourceNodeId={contextMenu.sourceNodeId}
+              {/* Canvas Toolbar */}
+              <CanvasToolbar
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onCopy={handleCopyNode}
+                onPaste={handlePasteNode}
+                isUndoAvailable={undoStack.length > 0}
+                isRedoAvailable={redoStack.length > 0}
+                isCopyAvailable={selectedNodeId !== null}
+                isPasteAvailable={clipboard !== null}
               />
-            )}
-          </ReactFlow>
-        </div>
-        <div className="w-[350px] bg-black border-l border-gray-800/50">
-          <AssetBoardPanel />
-        </div>
-      </div>
 
-      {/* Image Crop Modal */}
-      {cropImage && (
-        <ImageCropModal imageUrl={cropImage.dataUrl} onComplete={handleCropComplete} onCancel={handleCropCancel} />
-      )}
+              {/* Context Menu */}
+              {contextMenu && (
+                <CanvasContextMenu
+                  position={contextMenu}
+                  onClose={handleCloseContextMenu}
+                  onAddNode={handleAddNode}
+                  sourceNodeId={contextMenu.sourceNodeId}
+                />
+              )}
+            </ReactFlow>
+          </div>
+          <div className="w-[350px] bg-black border-l border-gray-800/50">
+            <AssetBoardPanel />
+          </div>
+        </div>
 
-      {/* Debug Panel */}
-      <DebugPanel />
+        {/* Image Crop Modal */}
+        {cropImage && (
+          <ImageCropModal imageUrl={cropImage.dataUrl} onComplete={handleCropComplete} onCancel={handleCropCancel} />
+        )}
+
+        {/* Debug Panel */}
+        <DebugPanel />
+      </FlowchartContext.Provider>
     </div>
   )
 }

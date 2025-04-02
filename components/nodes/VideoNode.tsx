@@ -321,7 +321,11 @@ function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
                     className="object-cover w-full h-full"
                   />
                 ) : (
-                  <Image src="/sample-image.png" alt="Node preview" width={260} height={150} className="object-cover" />
+                  <div className="w-full h-full flex items-center justify-center bg-black/30">
+                    <div className="text-[9px] text-yellow-300/90 font-mono tracking-wide text-center">
+                      Connect Image node
+                    </div>
+                  </div>
                 )}
               </>
             )}

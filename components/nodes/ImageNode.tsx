@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { memo, useState, useRef, useContext, useCallback } from "react"
-import { Handle, Position, type NodeProps, useReactFlow } from "reactflow"
+import { memo, useState, useRef, useContext, useCallback, useEffect } from "react"
+import { Handle, Position, type NodeProps } from "reactflow"
 import Image from "next/image"
 import { Slider } from "@/components/ui/slider"
 import { Maximize2, Download, Upload, ImageIcon } from "lucide-react"
@@ -14,6 +14,7 @@ import { useNodeActions } from "@/hooks/useNodeActions"
 import { Button } from "@/components/ui/button"
 import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
 import { useFlowchart } from "@/contexts/FlowchartContext"
+import { useReactFlow } from "reactflow"
 
 /**
  * ImageNode Component
@@ -36,7 +37,8 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   const [showImageSelector, setShowImageSelector] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
   const { savedImages, addImage } = useContext(ImageLibraryContext)
-  const { setNodes } = useReactFlow()
+  const { setNodes, getEdges, getNode } = useReactFlow()
+  const [sourceNodeContent, setSourceNodeContent] = useState<string | null>(data.sourceNodeContent || null)
 
   const { isSubmitting, timeRemaining, showResult, isGenerated, isNewNode, handleSubmitToggle } = useNodeActions({
     id,
@@ -142,6 +144,39 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
 
   // Get content to display - prioritize sourceNodeContent if available
   const displayContent = data.sourceNodeContent || (typeof data.content === "string" ? data.content : "")
+
+  // Check for connected prompt nodes
+  useEffect(() => {
+    const edges = getEdges()
+
+    // Find if there's a prompt node connected to this image node
+    const promptEdge = edges.find((edge) => edge.target === id && edge.source)
+
+    if (promptEdge) {
+      const sourceNode = getNode(promptEdge.source)
+      if (sourceNode && sourceNode.type === "analysis") {
+        // Update the node data with source node's content
+        const sourceContent = sourceNode.data?.content || ""
+        if (sourceContent !== data.sourceNodeContent) {
+          setSourceNodeContent(sourceContent)
+          setNodes((nodes) =>
+            nodes.map((node) =>
+              node.id === id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      sourceNodeContent: sourceContent,
+                      caption: null, // Ensure caption is removed
+                    },
+                  }
+                : node,
+            ),
+          )
+        }
+      }
+    }
+  }, [id, data.sourceNodeContent, setNodes, getEdges, getNode])
 
   return (
     <div
@@ -281,14 +316,11 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                   className="object-cover w-full h-full"
                 />
               ) : (
-                <div
-                  className="w-full h-full flex items-center justify-center bg-black/30 p-2 overflow-auto"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                >
+                <div className="w-full h-full flex items-center justify-center bg-black/30 p-2 overflow-auto">
                   <div className="text-[9px] text-yellow-300/90 font-mono tracking-wide text-center">
-                    {displayContent || "Waiting for connected prompt..."}
+                    {displayContent
+                      ? displayContent.substring(0, 50) + (displayContent.length > 50 ? "..." : "")
+                      : "Connect prompt node"}
                   </div>
                 </div>
               )
@@ -322,11 +354,7 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
               </div>
             )}
 
-            {data.caption && (isGenerated || data.imageUrl) && (
-              <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/70 text-yellow-300 text-[9px] font-mono tracking-wide">
-                {data.caption}
-              </div>
-            )}
+            {/* Caption is intentionally removed */}
           </div>
 
           <div className="space-y-1 pt-1 border-t border-gray-800/50">
@@ -493,15 +521,6 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Add prompt preview */}
-            {data.content && (
-              <div className="text-[9px] text-yellow-300/90 mt-3 mb-1 font-mono tracking-wide border-t border-gray-800/50 pt-2 line-clamp-2">
-                {typeof data.content === "string"
-                  ? data.content.substring(0, 100) + (data.content.length > 100 ? "..." : "")
-                  : ""}
-              </div>
-            )}
 
             <div className="flex justify-end items-center pt-1.5">
               <div className="flex gap-1">

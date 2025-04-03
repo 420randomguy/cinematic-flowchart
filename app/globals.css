@@ -77,8 +77,93 @@ body {
   @apply shadow-none;
 }
 
+/* COMPLETELY OVERHAULED HANDLE STYLING WITH !IMPORTANT FLAGS */
 .react-flow__handle {
-  @apply w-2 h-2 border-gray-700;
+  /* Reset all styles first */
+  all: initial !important;
+  display: block !important;
+
+  /* Make all handles visually identical */
+  width: 8px !important;
+  height: 8px !important;
+  border: 2px solid #999 !important;
+  border-radius: 50% !important;
+  background-color: #555 !important;
+
+  /* Position relative for the pseudo-element */
+  position: absolute !important;
+  z-index: 100 !important;
+
+  /* Center vertically */
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Create a consistent 40x40 invisible clickable area */
+.react-flow__handle::before {
+  content: "" !important;
+  position: absolute !important;
+  width: 40px !important; /* 40px clickable area */
+  height: 40px !important; /* 40px clickable area */
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: -1 !important;
+  background-color: rgba(255, 0, 0, 0.1) !important; /* Slightly visible for debugging */
+}
+
+/* Position handles consistently 15px from node edges */
+.react-flow__handle-right {
+  right: -15px !important; /* 15px offset */
+  left: auto !important;
+}
+
+.react-flow__handle-left {
+  left: -15px !important; /* 15px offset */
+  right: auto !important;
+}
+
+/* Hover effect */
+.react-flow__handle:hover {
+  transform: translateY(-50%) scale(1.5) !important;
+  background-color: #888 !important;
+}
+
+/* Differentiate input vs output handles by color only */
+.react-flow__handle-source {
+  background-color: #777 !important;
+}
+
+.react-flow__handle-target {
+  background-color: #555 !important;
+}
+
+/* Force all handles to be visible and properly positioned */
+.react-flow__handle {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: all !important;
+}
+
+/* Override any inline styles that might be causing inconsistency */
+.react-flow__handle[style*="width:"] {
+  width: 8px !important;
+}
+
+.react-flow__handle[style*="height:"] {
+  height: 8px !important;
+}
+
+.react-flow__handle[style*="right:"] {
+  right: -15px !important;
+}
+
+.react-flow__handle[style*="left:"] {
+  left: -15px !important;
+}
+
+.react-flow__handle[style*="top:"] {
+  top: 50% !important;
 }
 
 .react-flow__edge-path {
@@ -131,5 +216,73 @@ body {
 .react-flow__node:has(select:focus) *,
 .react-flow__node:has([role="combobox"]:focus-within) * {
   pointer-events: auto !important;
+}
+
+/* Add these styles at the end of the file */
+
+/* Connection line styling */
+.react-flow__connection-path {
+  stroke-width: 1.5;
+  stroke: #666;
+}
+
+/* Connection line animation */
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
+}
+
+/* Direct handle styling with high specificity */
+.react-flow__node .react-flow__handle,
+.react-flow__node .node-handle-left,
+.react-flow__node .node-handle-right {
+  width: 8px !important;
+  height: 8px !important;
+  background: #555 !important;
+  border: 2px solid #999 !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+}
+
+.react-flow__node .node-handle-left {
+  left: -15px !important;
+  transform: translateY(-50%) !important;
+}
+
+.react-flow__node .node-handle-right {
+  right: -15px !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Increase the actual clickable area */
+.react-flow__handle {
+  position: relative !important;
+}
+
+.react-flow__handle::after {
+  content: "";
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Ensure handles are visible */
+.react-flow__handle-source {
+  background-color: #777 !important;
+}
+
+.react-flow__handle-target {
+  background-color: #555 !important;
 }
 

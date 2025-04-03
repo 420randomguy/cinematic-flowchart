@@ -13,6 +13,9 @@ import ReactFlow, {
   ConnectionLineType,
   applyNodeChanges,
   applyEdgeChanges,
+  useStoreApi,
+  type Node,
+  type Connection,
 } from "reactflow"
 import "reactflow/dist/style.css"
 
@@ -45,99 +48,12 @@ const nodeTypes = {
 /**
  * Initial nodes for the canvas
  */
-const initialNodes = [
-  {
-    id: "1",
-    type: "analysis",
-    position: { x: 50, y: 280 },
-    data: {
-      title: "PROMPT TITLE",
-      showImage: false,
-      category: "text",
-      content: `Create a cinematic close-up shot of a vintage poem page with subtle lighting highlighting the texture of the paper. The scene should evoke a sense of nostalgia and intimacy, with muted tones and soft shadows.`,
-    },
-    style: {
-      width: 260,
-    },
-  },
-  {
-    id: "2",
-    type: "text-to-image",
-    position: { x: 450, y: 30 },
-    data: {
-      title: "CLOSE-UP OF A TEXTURED POEM PAGE, DIM...",
-      showImage: true,
-      category: "image",
-      caption: "Intimate poetry close-up",
-      seed: "416838458",
-      content: `**"Shot Type":** Close-up
-**"Composition":** Focus on a textured surface or 
-open pages of a book/poem, with significant 
-negative space around the edges.
-**"Color Palette":** Dominated by dark, muted 
-tones (deep blues, grays, and blacks) with subtle 
-lighting highlighting textures and edges for an 
-artistic effect.`,
-    },
-    style: {
-      width: 280,
-    },
-  },
-  {
-    id: "3",
-    type: "video",
-    position: { x: 450, y: 430 },
-    data: {
-      title: "TRAIN CONVERSATION SCENE",
-      showImage: true,
-      category: "video",
-      caption: "It is the z aileen are for by teapuit he upsh it bill",
-      seed: "789012345",
-      modelId: "wan-pro",
-      modelSettings: {
-        resolution: "720p",
-        duration_seconds: 4,
-        frame_rate: 30,
-        motion_intensity: "medium",
-      },
-      content: `Focus on the over-the-shoulder shot of 
-characters. Emphasize the intimate group 
-setting within the confined train setting, 
-highlighting conversations and body language to 
-convey connection and engagement. Realistic 
-and cinematic shot.`,
-      // Use a memoized callback to prevent unnecessary re-renders
-      onModelChange: (modelId, settings) => {
-        // Only log changes, don't update state here
-        console.log("Model changed:", modelId, settings)
-      },
-    },
-    style: {
-      width: 280,
-    },
-  },
-]
+const initialNodes = []
 
 /**
  * Initial edges for the canvas
  */
-const initialEdges = [
-  {
-    id: "e1-2",
-    source: "1",
-    target: "2",
-    animated: true,
-    style: { stroke: "#444", strokeWidth: 1 },
-  },
-  {
-    id: "e1-3",
-    source: "1",
-    target: "3",
-    animated: true,
-    style: { stroke: "#444", strokeWidth: 1 },
-    targetHandle: "video-text-input",
-  },
-]
+const initialEdges = []
 
 /**
  * FlowchartCanvasInner Component
@@ -155,7 +71,8 @@ function FlowchartCanvasInner() {
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
 
   // ReactFlow hooks
-  const { project, fitView } = useReactFlow()
+  const { project, fitView, getNode, getNodes, getEdges } = useReactFlow()
+  const store = useStoreApi()
 
   // Image crop state
   const [cropImage, setCropImage] = useState<{
@@ -175,6 +92,12 @@ function FlowchartCanvasInner() {
   // Update the FlowchartCanvasInner component to pass the selected node type
   // First, add a state to track the selected node type
   const [selectedNodeType, setSelectedNodeType] = useState<string | null>(null)
+
+  // Connection state
+  const [connectionStartNodeId, setConnectionStartNodeId] = useState<string | null>(null)
+  const [connectionStartHandleType, setConnectionStartHandleType] = useState<string | null>(null)
+  const [connectionStartHandleId, setConnectionStartHandleId] = useState<string | null>(null)
+  const [connectionPreview, setConnectionPreview] = useState<{ nodeId: string; handleId: string } | null>(null)
 
   const { addImage } = useContext(ImageLibraryContext)
 
@@ -251,10 +174,35 @@ function FlowchartCanvasInner() {
   )
 
   /**
+   * Determine the appropriate target handle based on source and target node types
+   */
+  const getTargetHandle = useCallback((sourceNode: Node, targetNode: Node): string | undefined => {
+    // For video nodes, determine the appropriate target handle based on source node type
+    if (targetNode.type === "video") {
+      if (sourceNode.type === "analysis") {
+        return "video-text-input"
+      } else if (
+        sourceNode.type === "image" ||
+        sourceNode.type === "text-to-image" ||
+        sourceNode.type === "image-to-image"
+      ) {
+        return "video-image-input"
+      }
+    }
+
+    // For text-to-image nodes, if source is analysis, connect to the default input
+    if (targetNode.type === "text-to-image" && sourceNode.type === "analysis") {
+      return "image-input"
+    }
+
+    return undefined
+  }, [])
+
+  /**
    * Handle connection between nodes
    */
   const handleConnect = useCallback(
-    (params) => {
+    (params: Connection) => {
       // Save current state before adding a connection
       saveState()
 
@@ -266,23 +214,7 @@ function FlowchartCanvasInner() {
 
       // If connecting to a node without a specific handle, determine the appropriate handle
       if (!params.targetHandle) {
-        // For video nodes, determine the appropriate target handle based on source node type
-        if (targetNode.type === "video") {
-          if (sourceNode.type === "analysis") {
-            params.targetHandle = "video-text-input"
-          } else if (
-            sourceNode.type === "image" ||
-            sourceNode.type === "text-to-image" ||
-            sourceNode.type === "image-to-image"
-          ) {
-            params.targetHandle = "video-image-input"
-          }
-        }
-
-        // For text-to-image nodes, if source is analysis, connect to the default input
-        if (targetNode.type === "text-to-image" && sourceNode.type === "analysis") {
-          params.targetHandle = "image-input"
-        }
+        params.targetHandle = getTargetHandle(sourceNode, targetNode)
       }
 
       // Handle connections to text-to-image nodes
@@ -386,7 +318,7 @@ function FlowchartCanvasInner() {
         )
       }, 50)
     },
-    [nodes, saveState, setNodes, setEdges],
+    [nodes, saveState, setNodes, setEdges, getTargetHandle],
   )
 
   /**
@@ -407,13 +339,95 @@ function FlowchartCanvasInner() {
    * Handle connection start for showing context menu when dragging to empty canvas
    */
   const handleConnectStart = useCallback(
-    (event, { nodeId, handleType }) => {
-      // Only track source connections from prompt nodes
+    (event, { nodeId, handleType, handleId }) => {
+      // Store the connection start info
+      setConnectionStartNodeId(nodeId)
+      setConnectionStartHandleType(handleType)
+      setConnectionStartHandleId(handleId)
+
+      // Get the source node type
       const sourceNode = nodes.find((node) => node.id === nodeId)
-      const isValidSource = handleType === "source" && sourceNode?.type === "analysis"
+      if (sourceNode) {
+        setSelectedNodeType(sourceNode.type)
+      }
+
+      // Track source connections from any node type
+      const isValidSource = handleType === "source" && sourceNode
       setSelectedNodeId(isValidSource ? nodeId : null)
     },
-    [nodes, setSelectedNodeId],
+    [nodes, setSelectedNodeId, setSelectedNodeType, setConnectionStartNodeId],
+  )
+
+  /**
+   * Find the closest node to a point
+   */
+  const findClosestNode = useCallback(
+    (point: { x: number; y: number }, excludeNodeId?: string): Node | null => {
+      const allNodes = getNodes()
+      const reactFlowBounds = canvasWrapperRef.current?.getBoundingClientRect()
+      if (!reactFlowBounds) return null
+
+      // Convert screen coordinates to flow coordinates
+      const flowPoint = project({
+        x: point.x - reactFlowBounds.left,
+        y: point.y - reactFlowBounds.top,
+      })
+
+      let closestNode: Node | null = null
+      let closestDistance = Number.POSITIVE_INFINITY
+
+      // Get the source node to determine compatible targets
+      const sourceNode = excludeNodeId ? getNode(excludeNodeId) : null
+
+      for (const node of allNodes) {
+        if (node.id === excludeNodeId) continue
+
+        // Skip incompatible node types based on source node
+        if (sourceNode) {
+          // If dragging from a prompt node, only connect to image or video nodes
+          if (
+            sourceNode.type === "analysis" &&
+            !(
+              node.type === "text-to-image" ||
+              node.type === "video" ||
+              node.type === "image-to-image" ||
+              node.type === "image"
+            )
+          ) {
+            continue
+          }
+
+          // If dragging from an image node, only connect to video nodes
+          if (sourceNode.type.includes("image") && node.type !== "video") {
+            continue
+          }
+
+          // If dragging from a video node, don't connect to anything
+          if (sourceNode.type === "video") {
+            continue
+          }
+        }
+
+        // Calculate the center of the node
+        const nodeCenter = {
+          x: node.position.x + (node.width || 260) / 2,
+          y: node.position.y + (node.height || 200) / 2,
+        }
+
+        // Calculate distance to node center
+        const distance = Math.sqrt(Math.pow(flowPoint.x - nodeCenter.x, 2) + Math.pow(flowPoint.y - nodeCenter.y, 2))
+
+        // Check if this node is closer than the current closest
+        if (distance < closestDistance && distance < 200) {
+          // 200px threshold - increased from 150px for better detection
+          closestNode = node
+          closestDistance = distance
+        }
+      }
+
+      return closestNode
+    },
+    [getNodes, getNode, project],
   )
 
   /**
@@ -421,31 +435,108 @@ function FlowchartCanvasInner() {
    */
   const handleConnectEnd = useCallback(
     (event) => {
-      if (!selectedNodeId) return
+      // Only proceed if we have a valid connection start
+      if (!connectionStartNodeId) return
 
-      // Get the target element
-      const targetElement = event.target
+      // Get the source node
+      const sourceNode = getNode(connectionStartNodeId)
+      if (!sourceNode) {
+        // Reset connection state
+        setConnectionStartNodeId(null)
+        setConnectionStartHandleType(null)
+        setConnectionStartHandleId(null)
+        return
+      }
 
-      // Check if we're dropping on the canvas (not on a node)
-      const targetIsPane =
-        targetElement.classList.contains("react-flow__pane") ||
-        targetElement.classList.contains("react-flow__renderer") ||
-        targetElement.classList.contains("react-flow__background")
+      // Check if we're dropping on a node by looking at elements under the cursor
+      const elementsUnderCursor = document.elementsFromPoint(event.clientX, event.clientY)
 
-      if (targetIsPane && selectedNodeId) {
-        // Get the position of the mouse
-        const canvasBounds = canvasWrapperRef.current?.getBoundingClientRect()
-        if (canvasBounds) {
-          // Show context menu at the drop position with the source node ID
+      // Find if any element is a node or part of a node
+      const nodeElement = elementsUnderCursor.find(
+        (el) => el.classList.contains("react-flow__node") || el.closest(".react-flow__node"),
+      )
+
+      // If we found a node element, handle node-to-node connection
+      if (nodeElement) {
+        const nodeId =
+          nodeElement.getAttribute("data-id") || nodeElement.closest(".react-flow__node")?.getAttribute("data-id")
+
+        // Only connect if it's a different node
+        if (nodeId && nodeId !== connectionStartNodeId) {
+          const targetNode = getNode(nodeId)
+          if (targetNode) {
+            // Determine appropriate handle ID based on node types
+            let validHandleId = null
+            if (connectionStartHandleType === "source") {
+              if (sourceNode.type === "analysis") {
+                if (targetNode.type === "video") {
+                  validHandleId = "video-text-input"
+                } else if (targetNode.type === "text-to-image") {
+                  validHandleId = "image-input"
+                }
+              } else if (sourceNode.type.includes("image")) {
+                if (targetNode.type === "video") {
+                  validHandleId = "video-image-input"
+                }
+              }
+            }
+
+            // Create connection parameters
+            const isSourceToTarget = connectionStartHandleType === "source"
+            const params = isSourceToTarget
+              ? {
+                  source: connectionStartNodeId,
+                  target: nodeId,
+                  sourceHandle: connectionStartHandleId,
+                  targetHandle: validHandleId || getTargetHandle(sourceNode, targetNode),
+                }
+              : {
+                  source: nodeId,
+                  target: connectionStartNodeId,
+                  sourceHandle: validHandleId || undefined,
+                  targetHandle: connectionStartHandleId,
+                }
+
+            // Create the connection
+            handleConnect(params)
+          }
+        }
+      } else {
+        // We're not dropping on a node, so show the context menu
+        // Make sure we're on the canvas pane
+        const isOnCanvasPane = elementsUnderCursor.some(
+          (el) =>
+            el.classList.contains("react-flow__pane") ||
+            el.classList.contains("react-flow__renderer") ||
+            el.classList.contains("react-flow__container") ||
+            el.classList.contains("react-flow"),
+        )
+
+        if (isOnCanvasPane) {
+          // Show context menu at the drop position
           setContextMenu({
             x: event.clientX,
             y: event.clientY,
-            sourceNodeId: selectedNodeId,
+            sourceNodeId: connectionStartNodeId,
           })
         }
       }
+
+      // Reset connection state
+      setConnectionStartNodeId(null)
+      setConnectionStartHandleType(null)
+      setConnectionStartHandleId(null)
     },
-    [selectedNodeId, setContextMenu],
+    [
+      connectionStartNodeId,
+      connectionStartHandleType,
+      connectionStartHandleId,
+      getNode,
+      handleConnect,
+      getTargetHandle,
+      setContextMenu,
+      setConnectionStartNodeId,
+    ],
   )
 
   /**
@@ -890,6 +981,12 @@ function FlowchartCanvasInner() {
                   data: {
                     title: "DROPPED IMAGE",
                     showImage: true,
+                    category: "image",
+                    seed: Math.floor(Math.random() * 1000000000).toString(),
+                    content: "",
+                    imageUrl: dataUrl,
+                    imageFile: file,
+                    isNewNode: true,
                     category: "image",
                     seed: Math.floor(Math.random() * 1000000000).toString(),
                     content: "",

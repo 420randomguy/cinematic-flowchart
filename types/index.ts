@@ -1,3 +1,4 @@
+import type React from "react"
 import type { ReactNode } from "react"
 
 // Node Types
@@ -49,8 +50,16 @@ export interface NodeContentProps {
   data: any
   isSubmitting: boolean
   isGenerated: boolean
-  showVideo: boolean
-  children: ReactNode
+  showVideo?: boolean
+  imageUrl?: string | null
+  textContent?: string
+  isDragging?: boolean
+  dropRef?: React.RefObject<HTMLDivElement>
+  handleDragOver?: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDragLeave?: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDrop?: (e: React.DragEvent<HTMLDivElement>) => void
+  handleClick?: () => void
+  children?: ReactNode
 }
 
 export interface NodeHeaderProps {
@@ -58,6 +67,7 @@ export interface NodeHeaderProps {
   type: string
   modelId?: string
   onModelChange?: (modelId: string) => void
+  className?: string
 }
 
 export interface SubmitButtonProps {
@@ -65,5 +75,49 @@ export interface SubmitButtonProps {
   isGenerated: boolean
   onClick: () => void
   timeRemaining?: number
+  disabled?: boolean
+  handleInputInteraction?: (isInteracting?: boolean) => void
+}
+
+export interface InteractiveElementProps {
+  onMouseEnter: () => void
+  onMouseLeave: () => void
+  onFocus: () => void
+  onBlur: () => void
+  onMouseDown: (e: React.MouseEvent) => void
+  onClick: (e: React.MouseEvent) => void
+  onDoubleClick: (e: React.MouseEvent) => void
+  onMouseMove: (e: React.MouseEvent) => void
+  onMouseUp: (e: React.MouseEvent) => void
+  onKeyDown: (e: React.KeyboardEvent) => void
+}
+
+export interface InputElementProps extends InteractiveElementProps {
+  onCopy: (e: React.ClipboardEvent) => void
+  onCut: (e: React.ClipboardEvent) => void
+  onPaste: (e: React.ClipboardEvent) => void
+}
+
+export interface NodeSettingsProps {
+  quality: number
+  setQuality: (quality: number) => void
+  seed: string | number
+  strength?: number
+  setStrength?: (strength: number) => void
+  selectedModelId?: string
+  modelSettings?: Record<string, any>
+  handleModelChange?: (modelId: string) => void
+  handleSettingsChange?: (settings: Record<string, any>) => void
+  data?: any
+  showSizeSelector?: boolean
+  defaultSize?: string
+  content?: string
+  className?: string
+}
+
+export interface NodeActionsProps {
+  imageUrl?: string | null
+  showVideo?: boolean
+  className?: string
 }
 

@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useContext } from "react"
+import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
 
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -15,22 +16,26 @@ export default function AssetBoardPanel() {
     title: string
   } | null>(null)
 
+  const { savedAssets } = useContext(ImageLibraryContext)
+
   // Improved drag start handler with better data transfer
   const handleDragStart = (e: React.DragEvent, item: any) => {
     // Set the drag data with complete node information
     e.dataTransfer.setData(
       "application/reactflow",
       JSON.stringify({
-        type: "video",
+        type: item.type === "video" ? "video" : "image",
         data: {
           title: item.title,
           showImage: true,
-          category: "video",
-          imageUrl: item.src,
-          seed: Math.floor(Math.random() * 1000000000).toString(),
+          category: item.type,
+          imageUrl: item.url,
+          seed: item.settings?.seed || Math.floor(Math.random() * 1000000000).toString(),
           content: item.description || "",
           caption: item.caption || null,
           isNewNode: true,
+          modelId: item.settings?.modelId,
+          modelSettings: item.settings?.modelSettings,
         },
       }),
     )
@@ -49,50 +54,6 @@ export default function AssetBoardPanel() {
     }, 0)
   }
 
-  // Sample asset items with more complete data
-  const assetItems = [
-    {
-      title: "INTIMATE POETRY CLOSE-UP",
-      type: "Image",
-      src: "/sample-image.png",
-      alt: "Poetry close-up",
-      caption: null,
-      description: "Close-up shot of vintage poem page with subtle lighting highlighting the texture of the paper.",
-    },
-    {
-      title: "OVER-THE-SHOULDER INTERACTION",
-      type: "Video",
-      src: "/sample-image.png",
-      alt: "Over-the-shoulder shot",
-      caption: "It is the z aileen are for by teapuit he upsh it bill",
-      description: "Over-the-shoulder shot showing intimate conversation between characters.",
-    },
-    {
-      title: "INTIMATE TRAIN CONVERSATIONS",
-      type: "Video",
-      src: "/sample-image.png",
-      alt: "Train conversations",
-      caption: null,
-      description: "Scene depicting intimate conversations in a train setting with atmospheric lighting.",
-    },
-    {
-      title: "VINTAGE BOOK TEXTURE",
-      type: "Image",
-      src: "/sample-image.png",
-      alt: "Vintage book texture",
-      caption: null,
-      description: "Close-up texture of vintage book pages with visible grain and aging patterns.",
-    },
-    {
-      title: "CINEMATIC LIGHTING STUDY",
-      type: "Image",
-      src: "/sample-image.png",
-      alt: "Cinematic lighting",
-      caption: null,
-      description: "Study of cinematic lighting techniques with dramatic shadows and highlights.",
-    },
-  ]
-
   return (
     <>
       <div className="flex justify-between items-center p-4 border-b border-gray-800/50">
@@ -106,31 +67,38 @@ export default function AssetBoardPanel() {
         className="bg-black border border-gray-800/50 rounded-sm p-4 space-y-6 overflow-auto flex-1 h-[calc(100vh-45px)]"
         id="asset-board"
       >
-        {assetItems.map((item, index) => (
-          <div key={index} className="space-y-1" draggable="true" onDragStart={(e) => handleDragStart(e, item)}>
-            <div className="flex justify-between items-center">
-              <div className="text-xs uppercase text-gray-400">{item.title}</div>
-              <div className="text-[9px] uppercase bg-black text-gray-300 px-1.5 py-0.5 rounded-sm">{item.type}</div>
-            </div>
-            <div
-              className="relative aspect-video bg-black rounded overflow-hidden cursor-grab"
-              onClick={() => setSelectedImage({ src: item.src, alt: item.alt, title: item.title })}
-            >
-              <Image
-                src={item.src || "/placeholder.svg"}
-                alt={item.alt}
-                width={600}
-                height={400}
-                className="object-cover"
-              />
-              {item.caption && (
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/50 text-yellow-300 text-xs">
-                  {item.caption}
-                </div>
-              )}
-            </div>
+        {savedAssets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm">
+            <p>No assets yet</p>
+            <p className="text-xs mt-2">Generate content or upload images to see them here</p>
           </div>
-        ))}
+        ) : (
+          savedAssets.map((item, index) => (
+            <div key={item.id} className="space-y-1" draggable="true" onDragStart={(e) => handleDragStart(e, item)}>
+              <div className="flex justify-between items-center">
+                <div className="text-xs uppercase text-gray-400">{item.title}</div>
+                <div className="text-[9px] uppercase bg-black text-gray-300 px-1.5 py-0.5 rounded-sm">{item.type}</div>
+              </div>
+              <div
+                className="relative aspect-video bg-black rounded overflow-hidden cursor-grab"
+                onClick={() => setSelectedImage({ src: item.url, alt: item.title, title: item.title })}
+              >
+                <img
+                  src={item.url || "/placeholder.svg"}
+                  alt={item.title}
+                  width={600}
+                  height={400}
+                  className="object-cover"
+                />
+                {item.caption && (
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/50 text-yellow-300 text-xs">
+                    {item.caption}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Full-screen image dialog */}

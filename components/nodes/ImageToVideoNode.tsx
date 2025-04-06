@@ -120,7 +120,6 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
         isConnectable={isConnectable}
         modelId={selectedModelId}
         onModelChange={handleModelChange}
-        connectedPreviewUrl={connectedImageUrl}
         contentProps={{
           imageUrl: connectedImageUrl,
           fallbackImageUrl: data.imageUrl,

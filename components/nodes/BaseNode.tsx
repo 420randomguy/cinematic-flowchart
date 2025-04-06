@@ -34,7 +34,6 @@ interface BaseNodeProps {
   settingsProps?: any
   actionsProps?: any
   children?: ReactNode
-  connectedPreviewUrl?: string | null;
 }
 
 // Create stable selector outside the component
@@ -55,7 +54,6 @@ function BaseNodeComponent({
   settingsProps = {},
   actionsProps = {},
   children,
-  connectedPreviewUrl,
 }: BaseNodeProps) {
   // Use the node events hook for selection, deletion, etc.
   const { handleNodeSelect } = useNodeEvents(id)
@@ -178,7 +176,7 @@ function BaseNodeComponent({
   const previewTextContent = contentProps.textContent ?? (data.sourceNodeContent || "");
 
   // Determine if there's preview content (connected image or connected text) to show
-  const hasPreviewContent = !!connectedPreviewUrl || isTextNodeConnected; // Show preview container if either image OR text is connected
+  const hasPreviewContent = !!data.sourceImageUrl || isTextNodeConnected; // Show preview container if either image OR text is connected
 
   // Optimized function to set up DOM references
   const setupDOMReferences = useCallback(() => {
@@ -281,20 +279,20 @@ function BaseNodeComponent({
 
       {/* Preview Area - Render only if output node and has connected content */}
       {isOutputNode && hasPreviewContent && (
-        <div className="px-1.5 pb-1 space-y-1"> 
-          {/* Image Preview - Use connectedPreviewUrl if provided */} 
-          {connectedPreviewUrl && <ImagePreview imageUrl={connectedPreviewUrl} />}  
+        <div className="px-1.5 pb-1 space-y-1">
+          {/* Image Preview - Use data.sourceImageUrl */} 
+          {data.sourceImageUrl && <ImagePreview imageUrl={data.sourceImageUrl} />}  
           
-          {/* Text Preview - Only show if text node is connected and content exists */}
+          {/* Text Preview - Only show if text node is connected */}
           {isTextNodeConnected && (
             <TextPreview
-              text={previewTextContent} 
+              text={data.sourceNodeContent || ""} // Directly use propagated content
               isConnected={true} // Already checked isTextNodeConnected
               showIfEmpty={true} // Show even if previewTextContent is empty initially
-              emptyText="Connect text node" // Show placeholder if empty
+              emptyText="Text node connected" // Update placeholder
               maxLength={30} // Optional: Adjust length
               // Add top border only if image preview is also shown above it
-              className={`${connectedPreviewUrl ? 'border-t border-gray-800/30 pt-1' : ''}`}
+              className={`${data.sourceImageUrl ? 'border-t border-gray-800/30 pt-1' : ''}`}
             />
           )}
         </div>
@@ -357,7 +355,9 @@ export const BaseNode = memo(BaseNodeComponent, (prevProps, nextProps) => {
     prevProps.contentProps?.isGenerated === nextProps.contentProps?.isGenerated &&
     prevProps.contentProps?.showVideo === nextProps.contentProps?.showVideo &&
     prevProps.contentProps?.imageUrl === nextProps.contentProps?.imageUrl &&
-    prevProps.connectedPreviewUrl === nextProps.connectedPreviewUrl // Compare the new prop
+    // Compare propagated data for previews
+    prevProps.data?.sourceImageUrl === nextProps.data?.sourceImageUrl &&
+    prevProps.data?.sourceNodeContent === nextProps.data?.sourceNodeContent
   )
 })
 

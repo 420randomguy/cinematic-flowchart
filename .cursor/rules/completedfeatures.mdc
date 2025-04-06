@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Rule
+
+- When user confirms a feature works, add it to the role below into the # Features section.
+- Do not attempt to change features. If change is necessary, then you must ask for permission from a user.
+
+# Features
+

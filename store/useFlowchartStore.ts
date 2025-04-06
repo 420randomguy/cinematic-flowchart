@@ -123,22 +123,107 @@ export const useFlowchartStore = create<FlowchartState>()(
         },
 
         onEdgesChange: (changes) => {
-          const { isUndoRedoing } = get()
+          const { isUndoRedoing, nodes } = get()
 
           // If we're removing edges, save the current state first
           if (!isUndoRedoing && changes.some((change) => change.type === "remove")) {
             get().saveState()
           }
 
-          set((state) => ({
-            edges: applyEdgeChanges(changes, state.edges),
-          }))
+          set((state) => {
+            // Get the state before applying changes to find removed edges info
+            const originalEdges = state.edges;
+            const updatedEdges = applyEdgeChanges(changes, originalEdges);
+            let updatedNodes = [...state.nodes]; // Start with current nodes
+
+            // Handle edge removals to clear target node data
+            changes.forEach((change) => {
+              if (change.type === 'remove') {
+                const removedEdge = originalEdges.find(edge => edge.id === change.id);
+                if (removedEdge) {
+                  const targetNodeIndex = updatedNodes.findIndex(n => n.id === removedEdge.target);
+                  if (targetNodeIndex !== -1) {
+                    const sourceNode = updatedNodes.find(n => n.id === removedEdge.source);
+                    const targetNode = updatedNodes[targetNodeIndex];
+                    const newData = { ...targetNode.data }; // Clone data
+
+                    if (sourceNode) {
+                      const isImageSource = sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image";
+                      const isTextSource = sourceNode.type === "text" || sourceNode.type === "url";
+
+                      if (isImageSource && removedEdge.targetHandle === 'image') {
+                        newData.sourceImageUrl = null;
+                        console.log(`[Store] Cleared sourceImageUrl on ${targetNode.id} due to edge removal from ${sourceNode.id}`);
+                      } else if (isTextSource && removedEdge.targetHandle === 'text') {
+                        newData.sourceNodeContent = null;
+                        console.log(`[Store] Cleared sourceNodeContent on ${targetNode.id} due to edge removal from ${sourceNode.id}`);
+                      }
+                    } else {
+                       // If source node not found (e.g., deleted simultaneously), clear both potentially
+                       if (removedEdge.targetHandle === 'image') newData.sourceImageUrl = null;
+                       if (removedEdge.targetHandle === 'text') newData.sourceNodeContent = null;
+                       console.warn(`[Store] Source node ${removedEdge.source} not found during edge removal, clearing data on ${targetNode.id}`);
+                    }
+
+                    // Update the node immutably
+                    updatedNodes[targetNodeIndex] = { ...targetNode, data: newData };
+                  }
+                }
+              }
+            });
+
+            return {
+              edges: updatedEdges,
+              nodes: updatedNodes, // Return the nodes possibly updated by edge removal
+            };
+          })
         },
 
         onConnect: (connection) => {
-          set((state) => ({
-            edges: addEdge(connection, state.edges),
-          }))
+          // Added saveState here before adding edge and propagating data
+          const { isUndoRedoing } = get();
+          if (!isUndoRedoing) {
+             get().saveState();
+          }
+
+          set((state) => {
+            const sourceNode = state.nodes.find(n => n.id === connection.source);
+            const targetNodeIndex = state.nodes.findIndex(n => n.id === connection.target);
+            let updatedNodes = [...state.nodes]; // Clone nodes array
+
+            if (sourceNode && targetNodeIndex !== -1) {
+              const targetNode = updatedNodes[targetNodeIndex];
+              const newData = { ...targetNode.data }; // Clone data object
+
+              const isImageSource = sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image";
+              const isTextSource = sourceNode.type === "text" || sourceNode.type === "url";
+
+              if (isImageSource && connection.targetHandle === 'image') {
+                 // Replace existing image connection implicitly
+                 newData.sourceImageUrl = sourceNode.data?.imageUrl || null;
+                 console.log(`[Store] Propagated sourceImageUrl from ${sourceNode.id} to ${targetNode.id}`);
+                 // Clear text if replacing with image
+                 // newData.sourceNodeContent = null; // Optional: Decide if image connection should clear text
+              } else if (isTextSource && connection.targetHandle === 'text') {
+                 // Replace existing text connection implicitly
+                 newData.sourceNodeContent = sourceNode.data?.content || '';
+                 console.log(`[Store] Propagated sourceNodeContent from ${sourceNode.id} to ${targetNode.id}`);
+                 // Clear image if replacing with text
+                 // newData.sourceImageUrl = null; // Optional: Decide if text connection should clear image
+              }
+
+              // Update the target node immutably
+              updatedNodes[targetNodeIndex] = { ...targetNode, data: newData };
+            }
+
+            // Add the new edge
+            const updatedEdges = addEdge(connection, state.edges);
+
+            return {
+              edges: updatedEdges,
+              nodes: updatedNodes, // Return nodes updated with propagated data
+            };
+          })
         },
 
         setSelectedNodeId: (id) => set({ selectedNodeId: id }),

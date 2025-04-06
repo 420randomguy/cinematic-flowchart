@@ -93,7 +93,6 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
         isConnectable={isConnectable}
         modelId={selectedModelId}
         onModelChange={handleModelChange}
-        connectedPreviewUrl={connectedImageUrl}
         contentProps={{
           imageUrl: connectedImageUrl,
           fallbackImageUrl: data.imageUrl,

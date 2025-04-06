@@ -60,7 +60,10 @@ function NodeHeaderSectionComponent({ title, type, modelId, onModelChange, class
         </div>
       )}
 
-      <div className="font-bold text-[10px] text-gray-400 tracking-wide uppercase">{title}</div>
+      {/* Conditionally render the title only if it differs from the type */}
+      {title.toUpperCase() !== type.toUpperCase() && (
+        <div className="font-bold text-[10px] text-gray-400 tracking-wide uppercase mt-1.5">{title}</div>
+      )}
     </div>
   )
 }

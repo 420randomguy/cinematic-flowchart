@@ -19,21 +19,17 @@ interface ConnectionState {
 
   // Utilities
   setCurrentNodesAndEdges: (nodes: Node[], edges: Edge[]) => void
-  propagateUpdates: (sourceNodeId: string, targetNodeIds?: string[]) => void
 }
 
 // Create a default connection lookup with empty methods
 const createEmptyConnectionLookup = (): ConnectionLookup => ({
   targetToSources: new Map(),
   sourceToTargets: new Map(),
-  connections: new Map(),
   nodeTypes: new Map(),
   getSourceNodes: () => [],
   getTargetNodes: () => [],
-  hasConnection: () => false,
-  getConnection: () => undefined,
   getNodeType: () => undefined,
-  getConnectedNodesOfType: () => [],
+  isValidConnection: () => false,
 })
 
 export const useConnectionStore = create<ConnectionState>()(
@@ -57,9 +53,6 @@ export const useConnectionStore = create<ConnectionState>()(
           [nodeId]: content,
         },
       }))
-
-      // Propagate to connected nodes
-      get().propagateUpdates(nodeId)
     },
 
     // Update a node's image URL
@@ -71,9 +64,6 @@ export const useConnectionStore = create<ConnectionState>()(
           [nodeId]: imageUrl,
         },
       }))
-
-      // Propagate to connected nodes
-      get().propagateUpdates(nodeId)
     },
 
     // Get a node's content
@@ -84,36 +74,6 @@ export const useConnectionStore = create<ConnectionState>()(
     // Get a node's image URL
     getNodeImageUrl: (nodeId: string) => {
       return get().nodeImageUrls[nodeId] || null
-    },
-
-    // Propagate updates to connected nodes
-    propagateUpdates: (sourceNodeId: string, targetNodeIds?: string[]) => {
-      const connectionLookup = get().connectionLookup
-      if (!connectionLookup) return
-
-      // Get target nodes if not provided
-      const nodesToUpdate = targetNodeIds || connectionLookup.getTargetNodes(sourceNodeId)
-
-      if (nodesToUpdate.length > 0) {
-        // Get the content and image URL
-        const content = get().nodeContents[sourceNodeId]
-        const imageUrl = get().nodeImageUrls[sourceNodeId]
-
-        // Dispatch events for content and image updates
-        if (content) {
-          const contentEvent = new CustomEvent("flowchart-content-update", {
-            detail: { sourceNodeId, content, targetNodeIds: nodesToUpdate },
-          })
-          window.dispatchEvent(contentEvent)
-        }
-
-        if (imageUrl) {
-          const imageEvent = new CustomEvent("flowchart-image-update", {
-            detail: { sourceNodeId, imageUrl, targetNodeIds: nodesToUpdate },
-          })
-          window.dispatchEvent(imageEvent)
-        }
-      }
     },
   })),
 )

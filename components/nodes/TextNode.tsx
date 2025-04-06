@@ -34,9 +34,6 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
       // Update this node's content
       data.content = text
 
-      // Update the connection store directly
-      updateNodeContent(id, text)
-
       // Also update directly through ReactFlow for immediate effect
       setNodes((nodes) =>
         nodes.map((node) => {
@@ -56,7 +53,7 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
         }),
       )
     },
-    [id, data, getEdges, setNodes, updateNodeContent],
+    [id, data, getEdges, setNodes],
   )
 
   // Initialize content if needed
@@ -66,46 +63,6 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
       data.content = promptText
     }
   }, [promptText, data])
-
-  // Add this useEffect to ensure initial content propagation
-  useEffect(() => {
-    // If there's content but no propagation has happened yet, trigger an update
-    if (data.content && !data._hasInitializedConnections) {
-      // Mark as initialized to prevent multiple propagations
-      data._hasInitializedConnections = true
-
-      // Propagate content to any connected nodes
-      updateNodeContent(id, data.content)
-
-      // Also update directly through ReactFlow for immediate effect
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          // Find nodes that have this node as a source
-          const isTarget = getEdges().some((edge) => edge.source === id && edge.target === node.id)
-          if (isTarget) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                sourceNodeContent: data.content,
-                _lastUpdated: Date.now(),
-              },
-            }
-          }
-          return node
-        }),
-      )
-    }
-  }, [id, data, updateNodeContent, getEdges, setNodes])
-
-  // Register content with the connection store
-  useEffect(() => {
-    if (data.content) {
-      // Register the content with the connection store
-      updateNodeContent(id, data.content)
-      console.log(`TextNode ${id} registered content:`, data.content)
-    }
-  }, [id, data.content, updateNodeContent])
 
   return (
     <BaseNodeContainer

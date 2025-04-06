@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo } from "react"
 import type { NodeProps } from "reactflow"
+import { useReactFlow } from "reactflow"
 import type { ImageNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
@@ -46,14 +47,38 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
     handleInputInteraction,
   })
 
-  // Add this useEffect to register the image URL with the connection store
-  // Update the connection store with the image URL when it changes
+  const { getEdges, setNodes } = useReactFlow()
+
+  // Remove the useEffect that registered image URL with the connection store
+  // Replace it with direct propagation using setNodes
   useEffect(() => {
     if (data.imageUrl) {
-      // Only update if the image URL has actually changed
-      updateNodeImageUrl(id, data.imageUrl)
+      // Remove store update
+      // updateNodeImageUrl(id, data.imageUrl) // REMOVED
+
+      // Add direct propagation via ReactFlow
+      const newImageUrl = data.imageUrl
+      setNodes((nodes) =>
+        nodes.map((node) => {
+          // Find nodes that have this node (id) as a source
+          const isTarget = getEdges().some((edge) => edge.source === id && edge.target === node.id)
+          if (isTarget) {
+            console.log(`ImageNode ${id} propagating imageUrl ${newImageUrl} to target ${node.id}`)
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                sourceImageUrl: newImageUrl, // Use sourceImageUrl
+                _lastUpdated: Date.now(),
+              },
+            }
+          }
+          return node
+        }),
+      )
     }
-  }, [id, data.imageUrl, updateNodeImageUrl])
+    // Add getEdges and setNodes to dependencies
+  }, [id, data.imageUrl, getEdges, setNodes])
 
   // Memoize the DOM element reference update to prevent excessive renders
   useEffect(() => {

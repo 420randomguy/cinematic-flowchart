@@ -6,6 +6,7 @@ alwaysApply: true
 # Next.js Frontend Rules
 
 ## Coding Style
+- do not introduce custom code or fix to a problem without first checking if codebase already has that function that just needs fixing
 - Write all code in TypeScript
 - Use simple, readable functions
 - Keep components small and focused

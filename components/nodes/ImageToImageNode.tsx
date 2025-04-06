@@ -1,13 +1,7 @@
 "use client"
 
 import { memo, useEffect, useMemo, useCallback } from "react"
-import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
-import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
-import { OutputSection } from "@/components/nodes/sections/OutputSection"
-import { SettingsSection } from "@/components/nodes/sections/SettingsSection"
-import { ActionsSection } from "@/components/nodes/sections/ActionsSection"
-import { SubmitButton } from "@/components/ui/submit-button"
-import { TextPreview } from "@/components/ui/text-preview"
+import { BaseNode } from "@/components/nodes/BaseNode"
 import { useNodeState } from "@/hooks/useNodeState"
 import { useImageHandling } from "@/hooks/useImageHandling"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
@@ -44,14 +38,16 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     handleSubmitToggle,
     selectedModelId,
     handleModelChange,
+    modelSettings,
+    handleSettingsChange,
   } = useNodeState({
     id,
     data,
     initialModelId: "flux-dev",
   })
 
-  // Use the node connections hook to get connected image
-  const { imageUrl, connectedImageNodes, textContent } = useNodeConnections({ id })
+  // Use the node connections hook to get connected image and text
+  const { imageUrl: connectedImageUrl, connectedImageNodes, textContent } = useNodeConnections({ id })
 
   // Use the image handling hook
   const {
@@ -72,101 +68,63 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     handleInputInteraction,
   })
 
-  // Check if a text node is connected
-  const hasConnectedTextNode = !!textContent
-
   // Check if an image node is connected
   const hasConnectedImageNode = connectedImageNodes.length > 0
+  
+  // Determine the image URL to use (connected or internal)
+  const displayImageUrl = useMemo(() => connectedImageUrl || data.imageUrl, [connectedImageUrl, data.imageUrl])
 
   // Get ReactFlow utilities
   const { getNodes, setNodes } = useReactFlow()
 
-  // Update the node when connected image changes
-  useEffect(() => {
-    if (connectedImageNodes.length > 0) {
-      const sourceNodeId = connectedImageNodes[0]
-      const nodes = getNodes()
-      const sourceNode = nodes.find((n) => n.id === sourceNodeId)
-
-      if (sourceNode?.data?.imageUrl && sourceNode.data.imageUrl !== data.imageUrl) {
-        // Update this node's image URL directly
-        setNodes((nodes) =>
-          nodes.map((node) =>
-            node.id === id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    imageUrl: sourceNode.data.imageUrl,
-                  },
-                }
-              : node,
-          ),
-        )
-      }
-    }
-  }, [connectedImageNodes, id, getNodes, setNodes, data.imageUrl])
+  // Define target handles
+  const targetHandleIds = useMemo(() => ["image", "text", "lora"], [])
 
   return (
     <>
-      <BaseNodeContainer id={id} data={data} nodeType="image-to-image" isConnectable={isConnectable}>
-        <NodeHeaderSection
-          title={data.title || "IMAGE-TO-IMAGE"}
-          type="image-to-image"
-          modelId={selectedModelId}
-          onModelChange={handleModelChange}
-        />
-
-        {/* Submit button */}
-        <div className="flex items-center justify-between border-t border-b border-gray-800/50 py-1.5 my-0.5">
-          <SubmitButton
-            isSubmitting={isSubmitting}
-            isGenerated={isGenerated}
-            onClick={handleSubmitToggle}
-            timeRemaining={timeRemaining}
-          />
-        </div>
-
-        {/* Output section with image */}
-        <OutputSection
-          title="GENERATED IMAGE"
-          imageUrl={imageUrl || data.imageUrl}
-          isDragging={isDragging}
-          handleDragOver={hasConnectedImageNode ? undefined : handleDragOver}
-          handleDragLeave={hasConnectedImageNode ? undefined : handleDragLeave}
-          handleDrop={hasConnectedImageNode ? undefined : handleDrop}
-          handleClick={hasConnectedImageNode ? undefined : handleClick}
-          isSubmitting={isSubmitting}
-          isGenerated={isGenerated}
-          requiresImageInput={!imageUrl && !data.imageUrl}
-        />
-
-        {/* Text preview */}
-        <TextPreview
-          text={textContent}
-          nodeId={id}
-          maxLength={100}
-          showIfEmpty={true}
-          emptyText="Connect text node"
-          isConnected={hasConnectedTextNode}
-          className="mt-2 border-t border-gray-800/30 pt-2"
-        />
-
-        {/* Settings section */}
-        <SettingsSection
-          quality={quality}
-          setQuality={setQuality}
-          seed={seed}
-          strength={strength}
-          setStrength={setStrength}
-          showSizeSelector={true}
-        />
-
-        {/* Actions section */}
-        <ActionsSection imageUrl={imageUrl || data.imageUrl} />
-      </BaseNodeContainer>
-
-      {/* Image selector dialog */}
+      <BaseNode
+        id={id}
+        data={data}
+        nodeType="image-to-image"
+        title={data.title || "IMAGE-TO-IMAGE"}
+        showSourceHandle={true} // Image nodes usually have an image output
+        showTargetHandle={true}
+        targetHandleIds={targetHandleIds}
+        isConnectable={isConnectable}
+        modelId={selectedModelId}
+        onModelChange={handleModelChange}
+        connectedPreviewUrl={connectedImageUrl}
+        contentProps={{
+          imageUrl: connectedImageUrl,
+          fallbackImageUrl: data.imageUrl,
+          textContent: textContent,
+          category: "image-to-image",
+          isSubmitting,
+          isGenerated,
+          timeRemaining,
+          handleSubmitToggle,
+          isDragging: hasConnectedImageNode ? undefined : isDragging,
+          dropRef: hasConnectedImageNode ? undefined : dropRef,
+          handleDragOver: hasConnectedImageNode ? undefined : handleDragOver,
+          handleDragLeave: hasConnectedImageNode ? undefined : handleDragLeave,
+          handleDrop: hasConnectedImageNode ? undefined : handleDrop,
+          handleClick: hasConnectedImageNode ? undefined : handleClick,
+        }}
+        settingsProps={{
+          quality,
+          setQuality,
+          seed,
+          strength,
+          setStrength,
+          selectedModelId,
+          modelSettings,
+          handleSettingsChange,
+        }}
+        actionsProps={{
+          imageUrl: displayImageUrl,
+        }}
+      />
+      {/* Image selector dialog remains outside BaseNode */}
       <ImageSelectorDialog
         open={showImageSelector}
         onOpenChange={setShowImageSelector}

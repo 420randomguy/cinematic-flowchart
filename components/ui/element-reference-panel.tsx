@@ -71,6 +71,11 @@ export default function ElementReferencePanel() {
                 <div className="text-gray-300 font-medium">image</div>
                 <div className="text-gray-500 text-[10px]">Basic image display and management</div>
               </div>
+
+              <div className="space-y-1">
+                <div className="text-gray-300 font-medium">url</div>
+                <div className="text-gray-500 text-[10px]">Input node for providing a URL</div>
+              </div>
             </div>
           )}
         </div>
@@ -148,9 +153,20 @@ export default function ElementReferencePanel() {
               </div>
 
               <div className="space-y-1">
-                <div className="text-gray-300 font-medium">image-input</div>
-                <div className="text-gray-500 text-[10px]">Special handle ID for text input to image nodes</div>
+                <div className="text-gray-300 font-medium">text</div>
+                <div className="text-gray-500 text-[10px]">Handle ID for text input (e.g., to image/video nodes)</div>
               </div>
+
+              <div className="space-y-1">
+                <div className="text-gray-300 font-medium">lora</div>
+                <div className="text-gray-500 text-[10px]">Handle ID for LoRA input (e.g., to image nodes)</div>
+              </div>
+
+              {/* Note: Image-to-Image nodes also accept image input, 
+                   but its specific handle ID is not explicitly defined 
+                   in the component file and needs further investigation 
+                   (expected: 'image-image-input'). 
+              */}
             </div>
           )}
         </div>

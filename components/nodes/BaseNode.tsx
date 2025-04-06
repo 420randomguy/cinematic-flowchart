@@ -13,6 +13,7 @@ import { NodeActions } from "@/components/ui/NodeActions"
 import { SourceHandle, TargetHandle } from "@/components/shared/NodeHandles"
 import { useNodeEvents } from "@/hooks/useNodeEvents"
 import { TextPreview } from "@/components/ui/text-preview"
+import ImagePreview from "@/components/ui/image-preview"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 
 // Simple DOM read function to replace the deleted utility
@@ -33,6 +34,7 @@ interface BaseNodeProps {
   settingsProps?: any
   actionsProps?: any
   children?: ReactNode
+  connectedPreviewUrl?: string | null;
 }
 
 // Create stable selector outside the component
@@ -53,6 +55,7 @@ function BaseNodeComponent({
   settingsProps = {},
   actionsProps = {},
   children,
+  connectedPreviewUrl,
 }: BaseNodeProps) {
   // Use the node events hook for selection, deletion, etc.
   const { handleNodeSelect } = useNodeEvents(id)
@@ -116,16 +119,12 @@ function BaseNodeComponent({
     }
   }
 
-  // Extract properties from contentProps for SubmitButton
-  const { isSubmitting, isGenerated, timeRemaining } = contentProps
+  // Extract properties from contentProps for SubmitButton and NodeContent
+  const { isSubmitting, isGenerated, timeRemaining, handleSubmitToggle, ...restContentProps } = contentProps
 
-  // Extract handleSubmitToggle from settingsProps if available
-  // If not available in settingsProps, check contentProps as a fallback
-  const handleSubmitToggle =
-    settingsProps.handleSubmitToggle || contentProps.handleSubmitToggle || data.handleSubmitToggle
-
-  // Determine if this is an output node
+  // Determine if this is an output node (nodes that process inputs)
   const isOutputNode = useMemo(() => {
+    // Assuming 'text', 'url', 'image' are pure input nodes
     return nodeType !== "text" && nodeType !== "url" && nodeType !== "image"
   }, [nodeType])
 
@@ -140,8 +139,24 @@ function BaseNodeComponent({
     [setIsInteractingWithInput]
   );
 
-  // Also fix the hasConnectedTextNode implementation
-  const hasConnectedTextNode = useCallback(() => {
+  // Renamed and updated function to check for any valid source connection
+  const hasConnectedSourceNode = useCallback(() => {
+    const incomingEdges = getEdges().filter((edge) => edge.target === id)
+    for (const edge of incomingEdges) {
+      const sourceNode = getNodes().find((node) => node.id === edge.source)
+      // Check for text, url, or image source types
+      if (
+        sourceNode &&
+        (sourceNode.type === "text" || sourceNode.type === "url" || sourceNode.type === "image")
+      ) {
+        return true
+      }
+    }
+    return false
+  }, [id, getEdges, getNodes])
+
+  // Check specifically if a TEXT or URL node is connected
+  const isTextNodeConnected = useCallback(() => {
     const incomingEdges = getEdges().filter((edge) => edge.target === id)
     for (const edge of incomingEdges) {
       const sourceNode = getNodes().find((node) => node.id === edge.source)
@@ -150,13 +165,20 @@ function BaseNodeComponent({
       }
     }
     return false
-  }, [id, getEdges, getNodes])
+  }, [id, getEdges, getNodes])()
 
-  // Get content to display - prioritize sourceNodeContent if available
-  const displayContent = data.sourceNodeContent || ""
+  // Get content and image URL from propagated data - Keep for potential use by other nodes
+  // const displayContent = data.sourceNodeContent || ""
+  // const displayImageUrl = data.sourceImageUrl || null
 
-  // Check if a text node is connected
-  const isTextNodeConnected = hasConnectedTextNode()
+  // Check if a valid source node is connected - Keep for handle logic etc.
+  const isSourceNodeConnected = hasConnectedSourceNode()
+
+  // Determine text content for preview from props or data
+  const previewTextContent = contentProps.textContent ?? (data.sourceNodeContent || "");
+
+  // Determine if there's preview content (connected image or connected text) to show
+  const hasPreviewContent = !!connectedPreviewUrl || isTextNodeConnected; // Show preview container if either image OR text is connected
 
   // Optimized function to set up DOM references
   const setupDOMReferences = useCallback(() => {
@@ -228,9 +250,6 @@ function BaseNodeComponent({
     return undefined
   }
 
-  // For output nodes, simplify to just have a single text input handle
-  const simplifiedTargetHandleIds = isOutputNode ? ["text"] : targetHandleIds
-
   // Create a default submit handler if none is provided
   const defaultSubmitHandler = useCallback(() => {
     // Default behavior for submit button if no handler is provided
@@ -248,53 +267,44 @@ function BaseNodeComponent({
         onModelChange={onModelChange}
       />
 
-      {/* Input handles - simplified for output nodes */}
-      {showTargetHandle &&
-        simplifiedTargetHandleIds.map((handleId) => (
-          <TargetHandle
-            key={handleId}
-            position={Position.Left}
-            id={handleId}
-            isConnectable={isConnectable}
-            handleType={getHandleType(handleId)}
+      {/* Submit button - Conditionally Rendered */}
+      {handleSubmitToggle && (
+         <div className="flex items-center justify-between border-t border-b border-gray-800/50 py-1.5 my-0.5 px-2">
+          <SubmitButton
+            isSubmitting={isSubmitting}
+            isGenerated={isGenerated}
+            onClick={handleSubmitToggle}
+            timeRemaining={timeRemaining}
           />
-        ))}
-
-      {/* Output handle - only visible when specified or generated */}
-      {(showSourceHandle || isGenerated) && (
-        <SourceHandle
-          position={Position.Right}
-          id={sourceHandleId}
-          isConnectable={isConnectable}
-          handleType={getSourceHandleType()}
-        />
+        </div>
       )}
 
-      {/* Submit button for output nodes - ALWAYS show for output nodes */}
-      {isOutputNode && (
-        <SubmitButton
-          isSubmitting={isSubmitting || false}
-          isGenerated={isGenerated || false}
-          onClick={handleSubmitToggle || defaultSubmitHandler}
-          timeRemaining={timeRemaining || 5}
-        />
+      {/* Preview Area - Render only if output node and has connected content */}
+      {isOutputNode && hasPreviewContent && (
+        <div className="px-1.5 pb-1 space-y-1"> 
+          {/* Image Preview - Use connectedPreviewUrl if provided */} 
+          {connectedPreviewUrl && <ImagePreview imageUrl={connectedPreviewUrl} />}  
+          
+          {/* Text Preview - Only show if text node is connected and content exists */}
+          {isTextNodeConnected && (
+            <TextPreview
+              text={previewTextContent} 
+              isConnected={true} // Already checked isTextNodeConnected
+              showIfEmpty={true} // Show even if previewTextContent is empty initially
+              emptyText="Connect text node" // Show placeholder if empty
+              maxLength={30} // Optional: Adjust length
+              // Add top border only if image preview is also shown above it
+              className={`${connectedPreviewUrl ? 'border-t border-gray-800/30 pt-1' : ''}`}
+            />
+          )}
+        </div>
       )}
 
-      {/* Node content with image/video - using SharedNodeContent instead of NodeContent */}
-      {data.showImage && <NodeContent data={data} {...contentProps} />}
+      {/* Dynamic Node Content Area (e.g., image output) */}
+      <NodeContent data={data} {...restContentProps} isSubmitting={isSubmitting} isGenerated={isGenerated} />
 
-      {/* Display text preview for output nodes - ALWAYS show for output nodes */}
-      {isOutputNode && (
-        <TextPreview
-          text={displayContent || data.sourceNodeContent}
-          nodeId={id}
-          maxLength={25}
-          showIfEmpty={true}
-          emptyText="Connect text node"
-          isConnected={isTextNodeConnected}
-          className="mt-2 border-t border-gray-800/30 pt-2"
-        />
-      )}
+      {/* Children (e.g., specific inputs/settings for derived nodes) */}
+      {children}
 
       {/* Node settings with quality, seed, and size */}
       {data.showImage && Object.keys(settingsProps).length > 0 && <NodeSettings {...settingsProps} />}
@@ -302,8 +312,25 @@ function BaseNodeComponent({
       {/* Node actions with fullscreen and download buttons */}
       {data.showImage && Object.keys(actionsProps).length > 0 && <NodeActions {...actionsProps} />}
 
-      {/* Additional custom content */}
-      {children}
+      {/* Handles */}
+      {propsRef.current.showTargetHandle &&
+        propsRef.current.targetHandleIds.map((handleId) => (
+          <TargetHandle
+            key={handleId}
+            id={handleId}
+            position={Position.Left}
+            isConnectable={propsRef.current.isConnectable}
+            handleType={getHandleType(handleId)} // Pass handle type for color
+          />
+        ))}
+      {propsRef.current.showSourceHandle && (
+        <SourceHandle
+          position={Position.Right}
+          isConnectable={propsRef.current.isConnectable}
+          handleType={getSourceHandleType()} // Pass handle type for color
+          id={sourceHandleId}
+        />
+      )}
     </NodeWrapper>
   )
 }
@@ -329,7 +356,8 @@ export const BaseNode = memo(BaseNodeComponent, (prevProps, nextProps) => {
     prevProps.contentProps?.isSubmitting === nextProps.contentProps?.isSubmitting &&
     prevProps.contentProps?.isGenerated === nextProps.contentProps?.isGenerated &&
     prevProps.contentProps?.showVideo === nextProps.contentProps?.showVideo &&
-    prevProps.contentProps?.imageUrl === nextProps.contentProps?.imageUrl
+    prevProps.contentProps?.imageUrl === nextProps.contentProps?.imageUrl &&
+    prevProps.connectedPreviewUrl === nextProps.connectedPreviewUrl // Compare the new prop
   )
 })
 

@@ -7,7 +7,6 @@ import { useConnectionStore } from "@/store/useConnectionStore"
 // Create stable selectors outside the hook
 const getNodeContentSelector = (state: any) => state.getNodeContent
 const getNodeImageUrlSelector = (state: any) => state.getNodeImageUrl
-const updateNodeContentSelector = (state: any) => state.updateNodeContent
 const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
 
 /**
@@ -33,9 +32,7 @@ export function useNodeConnections({
   const { setNodes, getNodes, getEdges } = useReactFlow()
 
   // Connection store with stable selectors
-  const getNodeContent = useConnectionStore(getNodeContentSelector)
   const getNodeImageUrl = useConnectionStore(getNodeImageUrlSelector)
-  const updateNodeContent = useConnectionStore(updateNodeContentSelector)
   const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
 
   // Get connected nodes using ReactFlow's getEdges directly
@@ -74,41 +71,6 @@ export function useNodeConnections({
     }
   }, [getEdges, getNodes, id])
 
-  // Listen for content updates from connected nodes
-  useEffect(() => {
-    const handleContentUpdate = (event: CustomEvent) => {
-      const { sourceNodeId, content, targetNodeIds } = event.detail
-
-      // Check if this node is a target of the update
-      if (targetNodeIds.includes(id)) {
-        setTextContent(content)
-
-        // Update the node data
-        setNodes((nodes) =>
-          nodes.map((node) =>
-            node.id === id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    sourceNodeContent: content,
-                    _lastUpdated: Date.now(),
-                  },
-                }
-              : node,
-          ),
-        )
-      }
-    }
-
-    // Listen for content updates
-    window.addEventListener("flowchart-content-update", handleContentUpdate as EventListener)
-
-    return () => {
-      window.removeEventListener("flowchart-content-update", handleContentUpdate as EventListener)
-    }
-  }, [id, setNodes])
-
   // Listen for image updates from connected nodes
   useEffect(() => {
     const handleImageUpdate = (event: CustomEvent) => {
@@ -143,34 +105,6 @@ export function useNodeConnections({
       window.removeEventListener("flowchart-image-update", handleImageUpdate as EventListener)
     }
   }, [id, setNodes])
-
-  // Check for initial content from connected nodes
-  useEffect(() => {
-    if (connectedNodes.textNodes.length > 0) {
-      const sourceNodeId = connectedNodes.textNodes[0]
-      const content = getNodeContent(sourceNodeId)
-
-      if (content && content !== textContent) {
-        setTextContent(content)
-
-        // Update the node data
-        setNodes((nodes) =>
-          nodes.map((node) =>
-            node.id === id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    sourceNodeContent: content,
-                    _lastUpdated: Date.now(),
-                  },
-                }
-              : node,
-          ),
-        )
-      }
-    }
-  }, [connectedNodes.textNodes, getNodeContent, id, setNodes, textContent])
 
   // Check for initial image from connected nodes
   useEffect(() => {
@@ -207,15 +141,32 @@ export function useNodeConnections({
     }
   }, [connectedNodes.imageNodes, getNodes, id, imageUrl, setNodes])
 
-  // Function to update node content
+  // Function to update node content AND PROPAGATE VIA setNodes
   const updateContent = useCallback(
     (content: string) => {
-      if (content !== textContent) {
-        setTextContent(content)
-        updateNodeContent(id, content)
-      }
+      // Update local state if needed
+      setTextContent(content)
+
+      // ADD direct propagation via ReactFlow
+      setNodes((nodes) =>
+        nodes.map((node) => {
+          // Find nodes that have this node (id) as a source
+          const isTarget = getEdges().some((edge) => edge.source === id && edge.target === node.id)
+          if (isTarget) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                sourceNodeContent: content, // Set the source content
+                _lastUpdated: Date.now(),
+              },
+            }
+          }
+          return node
+        }),
+      )
     },
-    [id, textContent, updateNodeContent],
+    [id, getEdges, setNodes], // Update dependencies
   )
 
   // Function to update node image URL

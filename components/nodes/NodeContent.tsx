@@ -13,6 +13,7 @@ interface NodeContentProps {
   isGenerated?: boolean
   showVideo?: boolean
   imageUrl?: string | null
+  fallbackImageUrl?: string | null
   textContent?: string
   isDragging?: boolean
   dropRef?: React.RefObject<HTMLDivElement>
@@ -32,6 +33,7 @@ function NodeContentComponent({
   isGenerated = false,
   showVideo = false,
   imageUrl,
+  fallbackImageUrl,
   textContent,
   isDragging = false,
   dropRef,
@@ -123,14 +125,12 @@ function NodeContentComponent({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={handleClick}
-                {...(handleClick ? interactiveProps : {})}
               >
-                {imageUrl || data?.imageUrl ? (
-                  <img
-                    src={imageUrl || data?.imageUrl || "/placeholder.svg"}
-                    alt="Source image"
-                    className="object-cover w-full h-full"
-                  />
+                {/* Show connected image first, then fallback, then placeholder */}
+                {imageUrl ? (
+                  <img src={imageUrl} alt="Source image" className="object-cover w-full h-full" />
+                ) : fallbackImageUrl ? (
+                  <img src={fallbackImageUrl} alt="Fallback source image" className="object-cover w-full h-full" />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
                     {handleClick ? (
@@ -183,6 +183,7 @@ export const NodeContent = memo(NodeContentComponent, (prevProps, nextProps) => 
     prevProps.isGenerated === nextProps.isGenerated &&
     prevProps.showVideo === nextProps.showVideo &&
     prevProps.imageUrl === nextProps.imageUrl &&
+    prevProps.fallbackImageUrl === nextProps.fallbackImageUrl &&
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.data?.category === nextProps.data?.category &&
     prevProps.data?.caption === nextProps.data?.caption

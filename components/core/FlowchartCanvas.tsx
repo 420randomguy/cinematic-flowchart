@@ -225,7 +225,7 @@ function FlowchartCanvasInner() {
       if (sourceNode && targetNode) {
         console.log(`Connection created from ${sourceNode.type} to ${targetNode.type}`)
 
-        // For image nodes, propagate the image URL
+        // For image nodes, potentially update the store if needed for other reasons (e.g., saving state)
         if (
           (sourceNode.type === "image" ||
             sourceNode.type === "text-to-image" ||
@@ -234,26 +234,20 @@ function FlowchartCanvasInner() {
         ) {
           console.log(`Propagating image URL from ${params.source} to ${params.target}:`, sourceNode.data.imageUrl)
 
-          // Update the connection store
+          // Update the connection store (Keep this if store state is used elsewhere)
           useConnectionStore.getState().updateNodeImageUrl(params.source, sourceNode.data.imageUrl)
-
-          // Force propagation to the specific target
-          useConnectionStore.getState().propagateUpdates(params.source, [params.target])
         }
 
-        // For text nodes, propagate the content
+        // For text/url nodes, potentially update the store if needed for other reasons
         if ((sourceNode.type === "text" || sourceNode.type === "url") && sourceNode.data?.content) {
           console.log(`Propagating content from ${params.source} to ${params.target}:`, sourceNode.data.content)
 
-          // Update the connection store
+          // Update the connection store (Keep this if store state is used elsewhere)
           useConnectionStore.getState().updateNodeContent(params.source, sourceNode.data.content)
-
-          // Force propagation to the specific target
-          useConnectionStore.getState().propagateUpdates(params.source, [params.target])
         }
       }
     },
-    [saveState, getNode, getEdges, setEdges, getTargetHandle],
+    [getNode, getTargetHandle, getEdges, setEdges, saveState]
   )
 
   /**

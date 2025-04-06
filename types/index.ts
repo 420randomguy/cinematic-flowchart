@@ -9,7 +9,7 @@ export interface BaseNodeData {
   showImage?: boolean
   category: NodeCategory
   content?: string
-  seed?: string
+  seed?: string | number
   caption?: string
   isNewNode?: boolean
   autoSubmit?: boolean
@@ -36,6 +36,7 @@ export interface VideoNodeData extends BaseNodeData {
   modelId?: string
   modelSettings?: Record<string, any>
   onModelChange?: (modelId: string, settings: Record<string, any>) => void
+  showVideo?: boolean
 }
 
 export interface TextNodeData extends BaseNodeData {

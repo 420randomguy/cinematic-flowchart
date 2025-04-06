@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState, useCallback, useEffect } from "react"
+import { memo, useState, useCallback, useEffect, useMemo } from "react"
 import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
 import { NodeHeaderSection } from "@/components/sections/NodeHeaderSection"
 import { InputSection } from "@/components/sections/InputSection"
@@ -12,18 +12,19 @@ import type { NodeProps } from "reactflow"
 import type { TextNodeData } from "@/types/node-types"
 import { useReactFlow } from "reactflow"
 
+// Create stable selector outside the component
+const updateNodeContentSelector = (state: any) => state.updateNodeContent
+
 function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
   // Use the node state hook
   const { nodeProps } = useNodeState({ id, data })
 
   // Local state for text input
   const [promptText, setPromptText] = useState(data.content || "")
-
-  // Get update function from connection store
-  const { updateNodeContent } = useConnectionStore()
+  
+  // Get update function from connection store with stable selector
+  const updateNodeContent = useConnectionStore(updateNodeContentSelector)
   const { getEdges, setNodes } = useReactFlow()
-
-  // Ensure the TextNode properly updates connected nodes when text changes
 
   // Handle text change with immediate propagation to connected nodes
   const handleTextChange = useCallback(
@@ -33,8 +34,7 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
       // Update this node's content
       data.content = text
 
-      // Update the connection store
-      const { updateNodeContent } = useConnectionStore.getState()
+      // Update the connection store directly
       updateNodeContent(id, text)
 
       // Also update directly through ReactFlow for immediate effect
@@ -56,7 +56,7 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
         }),
       )
     },
-    [id, data, getEdges, setNodes],
+    [id, data, getEdges, setNodes, updateNodeContent],
   )
 
   // Initialize content if needed
@@ -65,7 +65,7 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
     if (!data.content && promptText) {
       data.content = promptText
     }
-  }, [promptText])
+  }, [promptText, data])
 
   // Add this useEffect to ensure initial content propagation
   useEffect(() => {
@@ -98,10 +98,7 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
     }
   }, [id, data, updateNodeContent, getEdges, setNodes])
 
-  // The issue might be that the TextNode isn't properly registering its content
-  // Let's ensure it updates the connection store when its content changes
-
-  // Add or update the useEffect that registers the content
+  // Register content with the connection store
   useEffect(() => {
     if (data.content) {
       // Register the content with the connection store
@@ -115,8 +112,6 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
       id={id}
       data={data}
       nodeType="text"
-      showSourceHandle={true}
-      sourceHandleId="text"
       isConnectable={isConnectable}
     >
       <NodeHeaderSection title={data.title || "PROMPT TITLE"} type="text" />

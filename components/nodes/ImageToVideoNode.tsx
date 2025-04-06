@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useState, useEffect } from "react"
+import { memo, useCallback, useState, useEffect, useMemo } from "react"
 import type { NodeProps } from "reactflow"
 import type { VideoNodeData } from "@/types"
 import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
@@ -16,8 +16,13 @@ import { useImageHandling } from "@/hooks/useImageHandling"
 import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
 import { useReactFlow } from "reactflow"
 
-function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
-  const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
+// Create stable selector outside the component
+const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
+
+function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
+  // Use the store with stable selector
+  const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
       setIsInteractingWithInput(isInteracting)
@@ -68,7 +73,7 @@ function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
       const nodes = getNodes()
       const sourceNode = nodes.find((n) => n.id === sourceNodeId)
 
-      if (sourceNode?.data?.imageUrl) {
+      if (sourceNode?.data?.imageUrl && sourceNode.data.imageUrl !== data.imageUrl) {
         // Update this node's image URL directly
         setNodes((nodes) =>
           nodes.map((node) =>
@@ -85,14 +90,14 @@ function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
         )
       }
     }
-  }, [connectedImageNodes, id, getNodes, setNodes])
+  }, [connectedImageNodes, id, getNodes, setNodes, data.imageUrl])
 
   // Add handlers
-  const handleModelChange = useCallback((modelId) => {
+  const handleModelChange = useCallback((modelId: string) => {
     setSelectedModelId(modelId)
   }, [])
 
-  const handleSettingsChange = useCallback((settings) => {
+  const handleSettingsChange = useCallback((settings: Record<string, any>) => {
     setModelSettings(settings)
   }, [])
 
@@ -206,5 +211,5 @@ function VideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
   )
 }
 
-export default memo(VideoNode)
+export default memo(ImageToVideoNode)
 

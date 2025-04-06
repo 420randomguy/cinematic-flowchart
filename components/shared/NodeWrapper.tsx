@@ -10,7 +10,7 @@ interface NodeWrapperProps {
   type: string
   isNewNode?: boolean
   className?: string
-  onClick?: () => void
+  onClick?: (e: React.MouseEvent) => void
   children: React.ReactNode
   dataNodeId?: string
 }

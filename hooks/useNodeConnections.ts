@@ -4,6 +4,12 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 import { useReactFlow } from "reactflow"
 import { useConnectionStore } from "@/store/useConnectionStore"
 
+// Create stable selectors outside the hook
+const getNodeContentSelector = (state: any) => state.getNodeContent
+const getNodeImageUrlSelector = (state: any) => state.getNodeImageUrl
+const updateNodeContentSelector = (state: any) => state.updateNodeContent
+const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
+
 /**
  * Unified hook for handling node connections and content monitoring
  */
@@ -26,9 +32,11 @@ export function useNodeConnections({
   // ReactFlow hooks
   const { setNodes, getNodes, getEdges } = useReactFlow()
 
-  // Connection store
-  const connectionStore = useConnectionStore()
-  const { getNodeContent, getNodeImageUrl, updateNodeContent, updateNodeImageUrl } = connectionStore
+  // Connection store with stable selectors
+  const getNodeContent = useConnectionStore(getNodeContentSelector)
+  const getNodeImageUrl = useConnectionStore(getNodeImageUrlSelector)
+  const updateNodeContent = useConnectionStore(updateNodeContentSelector)
+  const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
 
   // Get connected nodes using ReactFlow's getEdges directly
   const connectedNodes = useMemo(() => {

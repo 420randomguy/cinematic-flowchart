@@ -1,7 +1,10 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
+
+// Create stable selector outside the hook
+const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
 
 interface UseNodeStateProps {
   id: string
@@ -13,8 +16,15 @@ interface UseNodeStateProps {
  * Hook for managing node state
  */
 export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
-  // Use the store directly
-  const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
+  // Use the store with stable selector
+  const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  
+  const handleInputInteraction = useCallback(
+    (isInteracting = false) => {
+      setIsInteractingWithInput(isInteracting);
+    },
+    [setIsInteractingWithInput]
+  );
 
   // Basic state
   const [quality, setQuality] = useState(data.quality || 80)

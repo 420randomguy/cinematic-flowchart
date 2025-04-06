@@ -2,10 +2,29 @@
 
 import type React from "react"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import { useReactFlow } from "reactflow"
 import { useImageLibraryStore } from "@/store/useImageLibraryStore"
 import { handleDragOver as utilHandleDragOver, handleDragLeave as utilHandleDragLeave } from "@/lib/utils/drag-drop"
+
+// Create stable selectors outside of the component
+// const getSavedImagesSelector = (state: any) => state.getSavedImages() // We will derive this inside the hook now
+const getSavedAssetsSelector = (state: any) => state.savedAssets
+const getAddAssetSelector = (state: any) => state.addAsset
+
+// Add the SavedAsset type if it's not already imported/defined in this scope
+// Assuming it's defined in the store file, we might need to import it
+// For now, let's add a basic definition here if needed, 
+// but ideally it should be imported from '@/store/useImageLibraryStore'
+interface SavedAsset {
+    id: string;
+    url: string;
+    type: "image" | "video";
+    title: string;
+    description?: string;
+    settings?: Record<string, any>;
+    timestamp: number;
+  }
 
 /**
  * Unified hook for image handling functionality
@@ -41,10 +60,13 @@ export function useImageHandling({
   const dropRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Use the store directly instead of context
-  const savedImages = useImageLibraryStore((state) => state.getSavedImages())
-  const savedAssets = useImageLibraryStore((state) => state.savedAssets)
-  const addImage = useImageLibraryStore((state) => state.addAsset)
+  // Use the store with stable selectors
+  // Select the raw assets array
+  const savedAssets = useImageLibraryStore(getSavedAssetsSelector)
+  const addImage = useImageLibraryStore(getAddAssetSelector)
+
+  // Derive savedImages from savedAssets using useMemo for stability
+  const savedImages = useMemo(() => savedAssets.map((asset: SavedAsset) => asset.url), [savedAssets])
 
   // ReactFlow
   const { setNodes } = useReactFlow()
@@ -244,7 +266,7 @@ export function useImageHandling({
     savedImages,
     savedAssets,
 
-    // Handlers
+    // Actions
     handleDragOver,
     handleDragLeave,
     handleDrop,
@@ -252,10 +274,8 @@ export function useImageHandling({
     handleOpenFileInput,
     selectImage,
     handleFileUpload,
-    updateNodeWithImage,
-
-    // Utilities
     processImageFile,
+    updateNodeWithImage,
   }
 }
 

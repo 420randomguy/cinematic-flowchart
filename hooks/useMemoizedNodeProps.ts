@@ -4,13 +4,20 @@ import { useMemo, useCallback } from "react"
 import { useReactFlow } from "reactflow"
 import { useConnectionStore } from "@/store/useConnectionStore"
 
+// Create stable selectors outside the hook
+const updateNodeContentSelector = (state: any) => state.updateNodeContent
+const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
+
 /**
  * Hook to provide memoized props and callbacks for node components
  * This reduces unnecessary re-renders by ensuring stable references
  */
 export function useMemoizedNodeProps(id: string, data: any) {
   const { setNodes } = useReactFlow()
-  const { updateNodeContent, updateNodeImageUrl } = useConnectionStore()
+  
+  // Use the store with stable selectors
+  const updateNodeContent = useConnectionStore(updateNodeContentSelector)
+  const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
 
   // Memoize the update content function
   const updateContent = useCallback(

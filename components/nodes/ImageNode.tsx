@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useEffect } from "react"
+import { memo, useCallback, useEffect, useMemo } from "react"
 import type { NodeProps } from "reactflow"
 import type { ImageNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
@@ -10,9 +10,14 @@ import { useImageHandling } from "@/hooks/useImageHandling"
 import { useMemoizedNodeProps } from "@/hooks/useMemoizedNodeProps"
 import { useConnectionStore } from "@/store/useConnectionStore"
 
+// Create stable selectors outside the component
+const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
+const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
+
 function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
-  const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
-  const updateNodeImageUrl = useConnectionStore((state) => state.updateNodeImageUrl)
+  // Use stores with stable selectors
+  const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
 
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
@@ -45,14 +50,17 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   // Update the connection store with the image URL when it changes
   useEffect(() => {
     if (data.imageUrl) {
-      // Register the image URL with the connection store
+      // Only update if the image URL has actually changed
       updateNodeImageUrl(id, data.imageUrl)
     }
   }, [id, data.imageUrl, updateNodeImageUrl])
 
+  // Memoize the DOM element reference update to prevent excessive renders
   useEffect(() => {
-    if (dropRef?.current && document.querySelector(`[data-node-id="${id}"] .node-content-container`)) {
-      dropRef.current = document.querySelector(`[data-node-id="${id}"] .node-content-container`)
+    // Find the node content container element once the component is mounted
+    const nodeContentContainer = document.querySelector(`[data-node-id="${id}"] .node-content-container`)
+    if (dropRef?.current !== nodeContentContainer && nodeContentContainer) {
+      dropRef.current = nodeContentContainer as HTMLDivElement
     }
   }, [id, dropRef])
 

@@ -6,7 +6,6 @@ import { ImageIcon } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { createInteractiveProps } from "@/lib/utils/node-interaction"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
-import { useImageLibraryStore } from "@/store/useImageLibraryStore"
 
 interface ImageSelectorDialogProps {
   open: boolean
@@ -14,6 +13,7 @@ interface ImageSelectorDialogProps {
   onSelectImage: (imageUrl: string) => void
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   handleInputInteraction?: (isInteracting?: boolean) => void
+  savedImages?: string[]
 }
 
 function ImageSelectorDialogComponent({
@@ -22,12 +22,10 @@ function ImageSelectorDialogComponent({
   onSelectImage,
   onFileUpload,
   handleInputInteraction,
+  savedImages = [],
 }: ImageSelectorDialogProps) {
   // Get the store function if handleInputInteraction isn't provided
   const storeHandleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
-
-  // Get saved images from the image library store
-  const savedImages = useImageLibraryStore((state) => state.getSavedImages())
 
   const inputHandler = handleInputInteraction || storeHandleInputInteraction
   const interactiveProps = createInteractiveProps(inputHandler)
@@ -45,8 +43,10 @@ function ImageSelectorDialogComponent({
                 <div
                   key={index}
                   className="aspect-video bg-gray-900 rounded overflow-hidden cursor-pointer hover:ring-1 hover:ring-yellow-300/50 group relative"
-                  onClick={() => onSelectImage(img)}
-                  {...interactiveProps}
+                  {...{
+                    ...interactiveProps,
+                    onClick: () => onSelectImage(img)
+                  }}
                 >
                   <img
                     src={img || "/placeholder.svg"}
@@ -75,7 +75,7 @@ function ImageSelectorDialogComponent({
         >
           <ImageIcon className="h-5 w-5 text-gray-500" />
           <span className="text-xs text-gray-400">Upload a new image</span>
-          <input type="file" accept="image/*" className="hidden" onChange={onFileUpload} {...interactiveProps} />
+          <input type="file" accept="image/*" className="hidden" onChange={onFileUpload} />
         </label>
       </DialogContent>
     </Dialog>

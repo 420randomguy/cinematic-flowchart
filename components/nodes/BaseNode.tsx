@@ -36,6 +36,9 @@ interface BaseNodeProps {
   children?: ReactNode
 }
 
+// Create stable selector outside the component
+const handleInputInteractionSelector = (state: any) => state.setIsInteractingWithInput
+
 function BaseNodeComponent({
   id,
   data,
@@ -127,8 +130,16 @@ function BaseNodeComponent({
     return nodeType !== "text" && nodeType !== "url" && nodeType !== "image"
   }, [nodeType])
 
-  // Get handleInputInteraction from the store directly
-  const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
+  // Use the store with stable selector
+  const setIsInteractingWithInput = useFlowchartStore(handleInputInteractionSelector)
+  
+  // Create properly memoized handler for input interaction
+  const handleInputInteraction = useCallback(
+    (isInteracting = false) => {
+      setIsInteractingWithInput(isInteracting);
+    },
+    [setIsInteractingWithInput]
+  );
 
   // Also fix the hasConnectedTextNode implementation
   const hasConnectedTextNode = useCallback(() => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useEffect } from "react"
+import { memo, useEffect, useMemo, useCallback } from "react"
 import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
 import { NodeHeaderSection } from "@/components/sections/NodeHeaderSection"
 import { OutputSection } from "@/components/sections/OutputSection"
@@ -17,9 +17,19 @@ import type { NodeProps } from "reactflow"
 import type { ImageToImageNodeData } from "@/types/node-types"
 import { useReactFlow } from "reactflow"
 
+// Create stable selector outside of the component
+const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
+
 function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNodeData>) {
-  // Use the store directly
-  const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
+  // Use the store with stable selector
+  const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  
+  const handleInputInteraction = useCallback(
+    (isInteracting = false) => {
+      setIsInteractingWithInput(isInteracting);
+    },
+    [setIsInteractingWithInput]
+  );
 
   // Use the node state hook for managing state
   const {
@@ -78,7 +88,7 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
       const nodes = getNodes()
       const sourceNode = nodes.find((n) => n.id === sourceNodeId)
 
-      if (sourceNode?.data?.imageUrl) {
+      if (sourceNode?.data?.imageUrl && sourceNode.data.imageUrl !== data.imageUrl) {
         // Update this node's image URL directly
         setNodes((nodes) =>
           nodes.map((node) =>
@@ -95,7 +105,7 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
         )
       }
     }
-  }, [connectedImageNodes, id, getNodes, setNodes])
+  }, [connectedImageNodes, id, getNodes, setNodes, data.imageUrl])
 
   return (
     <>

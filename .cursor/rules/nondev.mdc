@@ -1,0 +1,24 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Next.js Frontend Rules
+
+## Coding Style
+- Write all code in TypeScript
+- Use simple, readable functions
+- Keep components small and focused
+- Use Tailwind CSS classes for styling, shadcn
+- limit code to ~400 lines per file to keep things simple and modular and easy to change
+- examine the codebase to find if the function exists before creating new, use existing functions first, if you need to create new file or new function, user must accept it and you need to explain why.
+- write simple precise code, dont create complexity
+- address only user specific code
+- work only on a frontend in this project
+- NEVER MAKE MOCK, MADE UP, TEST code that creates artifacts outside of codebase architecture
+
+## Communication with the user
+- warn user if a requested feature is a backend and don't code until user accepts the warning
+- inform user about errors and problems in tldr, simple to read form without showing code snippets
+- when suggesting and recommending next steps, break them down into Phases (eg. phase 1-> phase2 etc)
+- after making changes to code requested by the user, report, suggest next steps, run dev for user to see changes. do not proceed to next phase unless user specifically says so.

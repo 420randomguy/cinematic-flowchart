@@ -1,0 +1,261 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useCallback, useRef, useEffect } from "react"
+import { useReactFlow } from "reactflow"
+import { useImageLibraryStore } from "@/store/useImageLibraryStore"
+import { handleDragOver as utilHandleDragOver, handleDragLeave as utilHandleDragLeave } from "@/lib/utils/drag-drop"
+
+/**
+ * Unified hook for image handling functionality
+ * Handles image selection, upload, and drag-and-drop
+ */
+export function useImageHandling({
+  id,
+  data,
+  onImageSelect,
+  onImageUpload,
+  onDragStateChange,
+  initialImageUrl,
+  updateConnectedNodes = true,
+  updateNodeImageUrl,
+  handleInputInteraction,
+}: {
+  id: string
+  data: any
+  onImageSelect?: (imageUrl: string) => void
+  onImageUpload?: (file: File, imageUrl: string) => void
+  onDragStateChange?: (isDragging: boolean) => void
+  initialImageUrl?: string
+  updateConnectedNodes?: boolean
+  updateNodeImageUrl?: (nodeId: string, imageUrl: string) => void
+  handleInputInteraction?: (isInteracting?: boolean) => void
+}) {
+  // State
+  const [isDragging, setIsDragging] = useState(false)
+  const [showImageSelector, setShowImageSelector] = useState(false)
+  const [selectedImage, setSelectedImage] = useState(initialImageUrl || data.imageUrl || null)
+
+  // Refs
+  const dropRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Use the store directly instead of context
+  const savedImages = useImageLibraryStore((state) => state.getSavedImages())
+  const savedAssets = useImageLibraryStore((state) => state.savedAssets)
+  const addImage = useImageLibraryStore((state) => state.addAsset)
+
+  // ReactFlow
+  const { setNodes } = useReactFlow()
+
+  // Update node with image
+  const updateNodeWithImage = useCallback(
+    (imageUrl: string, file?: File) => {
+      // Update the node data
+      const updatedData = {
+        ...data,
+        imageUrl: imageUrl,
+        ...(file ? { imageFile: file } : {}),
+      }
+
+      // Update the node in ReactFlow
+      setNodes((nodes) => nodes.map((node) => (node.id === id ? { ...node, data: updatedData } : node)))
+
+      // Update connected nodes if needed
+      if (updateConnectedNodes && updateNodeImageUrl) {
+        updateNodeImageUrl(id, imageUrl)
+      }
+    },
+    [data, id, setNodes, updateConnectedNodes, updateNodeImageUrl],
+  )
+
+  // Process image file (used by both drop and file input)
+  const processImageFile = useCallback(
+    (file: File) => {
+      if (!file) return
+
+      const reader = new FileReader()
+
+      reader.onload = () => {
+        try {
+          const imageUrl = reader.result as string
+          if (!imageUrl) return
+
+          // Save the image to the library
+          addImage({
+            url: imageUrl,
+            type: "image",
+            title: "Uploaded Image",
+          })
+          setSelectedImage(imageUrl)
+
+          // Use the provided callback if available
+          if (onImageUpload) {
+            onImageUpload(file, imageUrl)
+            return
+          }
+
+          // Otherwise, update the node data directly
+          updateNodeWithImage(imageUrl, file)
+        } catch (error) {
+          console.error("Error processing image file:", error)
+        }
+      }
+
+      reader.onerror = () => {
+        console.error("Error reading file:", reader.error)
+      }
+
+      try {
+        reader.readAsDataURL(file)
+      } catch (error) {
+        console.error("Error reading file as data URL:", error)
+      }
+    },
+    [addImage, onImageUpload, updateNodeWithImage],
+  )
+
+  // Enhanced drag over handler with state update
+  const handleDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      const result = utilHandleDragOver(e)
+      setIsDragging(true)
+      onDragStateChange?.(true)
+      return result
+    },
+    [onDragStateChange],
+  )
+
+  // Enhanced drag leave handler with state update
+  const handleDragLeave = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      const result = utilHandleDragLeave(e)
+      setIsDragging(false)
+      onDragStateChange?.(false)
+      return result
+    },
+    [onDragStateChange],
+  )
+
+  // Handle file drop
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (!e) return
+
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragging(false)
+      onDragStateChange?.(false)
+
+      try {
+        if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+          const file = e.dataTransfer.files[0]
+          if (file && file.type && file.type.startsWith("image/")) {
+            processImageFile(file)
+          }
+        }
+      } catch (error) {
+        console.error("Error handling file drop:", error)
+      }
+    },
+    [onDragStateChange, processImageFile],
+  )
+
+  // Handle click to open image selector
+  const handleClick = useCallback(() => {
+    // Ensure the dialog opens
+    setShowImageSelector(true)
+    // Notify about input interaction
+    handleInputInteraction?.(true)
+
+    // Log for debugging
+    console.log("Image click handler triggered, opening selector dialog")
+  }, [handleInputInteraction])
+
+  // Handle click to open file input
+  const handleOpenFileInput = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
+    handleInputInteraction?.(true)
+  }, [handleInputInteraction])
+
+  // Handle image selection from library
+  const selectImage = useCallback(
+    (imageUrl: string) => {
+      setSelectedImage(imageUrl)
+
+      // Use the provided callback if available
+      if (onImageSelect) {
+        onImageSelect(imageUrl)
+        setShowImageSelector(false)
+        handleInputInteraction?.(false)
+        return
+      }
+
+      // Otherwise, update the node data directly
+      updateNodeWithImage(imageUrl)
+      setShowImageSelector(false)
+      handleInputInteraction?.(false)
+    },
+    [onImageSelect, updateNodeWithImage, handleInputInteraction],
+  )
+
+  // Handle file upload from input
+  const handleFileUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0]
+        if (file.type.startsWith("image/")) {
+          processImageFile(file)
+        }
+      }
+      setShowImageSelector(false)
+      handleInputInteraction?.(false)
+
+      // Reset the input value so the same file can be selected again
+      if (e.target) {
+        e.target.value = ""
+      }
+    },
+    [processImageFile, handleInputInteraction],
+  )
+
+  // Update selected image when data.imageUrl changes
+  useEffect(() => {
+    if (data.imageUrl && data.imageUrl !== selectedImage) {
+      setSelectedImage(data.imageUrl)
+    }
+  }, [data.imageUrl, selectedImage])
+
+  return {
+    // State
+    isDragging,
+    showImageSelector,
+    setShowImageSelector,
+    selectedImage,
+
+    // Refs
+    dropRef,
+    fileInputRef,
+
+    // Data
+    savedImages,
+    savedAssets,
+
+    // Handlers
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleClick,
+    handleOpenFileInput,
+    selectImage,
+    handleFileUpload,
+    updateNodeWithImage,
+
+    // Utilities
+    processImageFile,
+  }
+}
+

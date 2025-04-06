@@ -12,6 +12,13 @@ import ReactFlow, {
   useReactFlow,
   type Node,
   MarkerType,
+  type ReactFlowInstance,
+  type Edge,
+  type NodeMouseHandler,
+  type OnConnectStart,
+  SelectionMode,
+  ConnectionMode,
+  type NodeDragHandler,
 } from "reactflow"
 import "reactflow/dist/style.css"
 
@@ -33,9 +40,6 @@ import { useConnectionStore } from "@/store/useConnectionStore"
 // Import node types
 import { nodeTypes, preloadAllNodeTypes } from "@/lib/utils/dynamic-node-types"
 
-// Import utilities
-import { debounce, throttle } from "@/lib/utils/state-optimization"
-
 /**
  * FlowchartCanvasInner Component
  *
@@ -48,9 +52,7 @@ function FlowchartCanvasInner() {
     edges,
     onNodesChange,
     onEdgesChange,
-    onConnect,
     selectedNodeId,
-    isDragging,
     isInteractingWithInput,
     contextMenu,
     clipboard,
@@ -81,19 +83,10 @@ function FlowchartCanvasInner() {
 
   // Refs
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
-  const reactFlowWrapperRef = useRef<HTMLDivElement>(null)
   const reactFlowInstanceRef = useRef<any>(null)
 
   // ReactFlow hooks
   const { project, fitView, getNode, getNodes, getEdges, setEdges } = useReactFlow()
-  const store = useStoreApi()
-
-  // Local state for the selected node type (not moving this to Zustand as it's very local)
-  const [selectedNodeType, setSelectedNodeType] = useState<string | null>(null)
-  const [hoveredNode, setHoveredNode] = useState<string | null>(null)
-
-  // Flag to prevent multiple simultaneous state updates
-  const isUpdatingRef = useRef(false)
 
   // Track mounted state
   const isMountedRef = useRef(false)
@@ -109,18 +102,10 @@ function FlowchartCanvasInner() {
     setCurrentNodesAndEdges(nodes, edges)
   }, [nodes, edges, setCurrentNodesAndEdges])
 
-  // Store the ReactFlow instance
-  const onInit = useCallback((reactFlowInstance) => {
-    reactFlowInstanceRef.current = reactFlowInstance
-  }, [])
-
   /**
    * Determine the appropriate target handle based on source and target node types
    */
   const getTargetHandle = useCallback((sourceNode: Node, targetNode: Node): string | undefined => {
-    // Remove this line:
-    // const { isValidConnection } = require("@/types/node-model");
-
     // First check if the connection is valid at the node type level
     if (!isValidConnection(sourceNode.type as any, targetNode.type as any)) {
       return undefined // Invalid connection
@@ -165,9 +150,6 @@ function FlowchartCanvasInner() {
         return
       }
 
-      // Remove this line:
-      // const { isValidConnection } = require("@/types/node-model");
-
       // Step 1: Check if the connection is valid at the node type level
       if (
         !isValidConnection(sourceNode.type as any, targetNode.type as any, params.sourceHandle, params.targetHandle)
@@ -179,56 +161,65 @@ function FlowchartCanvasInner() {
       // Save current state before adding a connection
       saveState()
 
-      // Step 2: Determine the appropriate target handle if not specified
-      const targetHandleType = params.targetHandle || getTargetHandle(sourceNode, targetNode)
+      // Step 2: Determine the definitive target handle ID.
+      // Prioritize the handle ID directly from params (usually from click-to-connect).
+      // Fall back to getTargetHandle (usually from drag-to-connect via handleConnectEnd).
+      let definitiveTargetHandleId = params.targetHandle;
+      if (!definitiveTargetHandleId) {
+        console.log("[handleConnect] params.targetHandle missing, trying getTargetHandle...")
+        definitiveTargetHandleId = getTargetHandle(sourceNode, targetNode) ?? null;
+      }
 
-      if (!targetHandleType) {
-        console.error("Could not determine target handle type")
+      // If we still don't have a handle ID, we cannot proceed reliably.
+      if (!definitiveTargetHandleId) {
+        console.error("[handleConnect] Could not determine target handle ID.", params);
         return
       }
 
-      // Step 3: Find ALL existing edges that connect to this target node's specific handle
-      const existingEdges = getEdges().filter(
-        (edge) => edge.target === params.target && edge.targetHandle === targetHandleType,
-      )
+      // Step 3: Find ALL existing edges connecting from the SAME SOURCE TYPE to this target node
+      const existingEdges = getEdges().filter((edge) => {
+        if (edge.target !== params.target) return false; // Must connect to the same target node
+        const existingSourceNode = getNode(edge.source);
+        // Check if the existing source node's type matches the new source node's type
+        return existingSourceNode?.type === sourceNode.type;
+      })
 
-      // If there are existing connections to this handle, remove them ALL first
+      // If there are existing connections of the same source type, remove them ALL first
+      let edgesToRemoveIds: string[] = [];
       if (existingEdges.length > 0) {
-        console.log(`Replacing ${existingEdges.length} existing connections to ${params.target}:${targetHandleType}`)
-
-        // Create removal changes for each existing edge
-        const edgeRemovals = existingEdges.map((edge) => ({
-          id: edge.id,
-          type: "remove" as const,
-        }))
-
-        // Apply the edge removals
-        onEdgesChange(edgeRemovals)
+        console.log(`[handleConnect] Replacing ${existingEdges.length} existing connection(s) of type ${sourceNode.type} to ${params.target}`)
+        edgesToRemoveIds = existingEdges.map(edge => edge.id);
+        // DO NOT call onEdgesChange here anymore
       }
 
       // Create a unique edge ID
       const edgeId = `e${params.source}-${params.target}-${Date.now()}`
 
-      // Add the new connection
-      setEdges((edges) => [
-        ...edges,
-        {
-          id: edgeId,
-          source: params.source,
-          sourceHandle: params.sourceHandle,
-          target: params.target,
-          targetHandle: targetHandleType,
-          type: "smoothstep",
-          animated: true,
-          style: { stroke: "#444", strokeWidth: 1 },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            width: 20,
-            height: 20,
-            color: "#444",
-          },
+      // Create the new edge definition
+      const newEdge = {
+        id: edgeId,
+        source: params.source!,
+        sourceHandle: params.sourceHandle,
+        target: params.target!,
+        targetHandle: definitiveTargetHandleId,
+        type: "smoothstep",
+        animated: true,
+        style: { stroke: "#444", strokeWidth: 1 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+          color: "#444",
         },
-      ])
+      };
+
+      // Atomically remove old edges and add the new one
+      setEdges((currentEdges: Edge[]) => {
+        // Filter out edges marked for removal
+        const filteredEdges = currentEdges.filter(edge => !edgesToRemoveIds.includes(edge.id));
+        // Add the new edge
+        return [...filteredEdges, newEdge];
+      });
 
       // Propagate data from source to target
       if (sourceNode && targetNode) {
@@ -262,42 +253,71 @@ function FlowchartCanvasInner() {
         }
       }
     },
-    [saveState, onEdgesChange, getNode, getEdges, setEdges, getTargetHandle],
+    [saveState, getNode, getEdges, setEdges, getTargetHandle],
   )
 
   /**
    * Handle connection start for showing context menu when dragging to empty canvas
    */
-  const handleConnectStart = useCallback(
+  const handleConnectStart: OnConnectStart = useCallback(
     (event, { nodeId, handleType, handleId }) => {
-      // Store the connection start info in Zustand
-      setConnectionStartNodeId(nodeId)
-      setConnectionStartHandleType(handleType)
-      setConnectionStartHandleId(handleId)
+      // Type assertion for event target
+      const target = event.target as Element;
 
-      // Get the source node type
-      const sourceNode = nodes.find((node) => node.id === nodeId)
-      if (sourceNode) {
-        setSelectedNodeType(sourceNode.type)
+      // Check if interacting with an input field to prevent triggering connection start
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || (target as HTMLElement).isContentEditable)) {
+        return;
       }
 
-      // Track source connections from any node type
-      const isValidSource = handleType === "source" && sourceNode
-      setSelectedNodeId(isValidSource ? nodeId : null)
+      // Store the connection start info in Zustand
+      if (nodeId && handleType) {
+        setConnectionStartNodeId(nodeId)
+        setConnectionStartHandleType(handleType)
+        setConnectionStartHandleId(handleId)
+
+        // Track source connections from any node type
+        // Check if the handle type is source before setting selectedNodeId
+        const isValidSource = handleType === "source";
+        setSelectedNodeId(isValidSource ? nodeId : null);
+      }
     },
-    [nodes, setSelectedNodeId, setConnectionStartNodeId, setConnectionStartHandleType, setConnectionStartHandleId],
+    [
+      nodes,
+      setSelectedNodeId,
+      setConnectionStartNodeId,
+      setConnectionStartHandleType,
+      setConnectionStartHandleId,
+    ],
   )
 
   /**
    * Handle connection end - this is where we implement the smart connection logic
    */
   const handleConnectEnd = useCallback(
-    (event) => {
+    (event: MouseEvent | TouchEvent) => {
       // Only proceed if we have a valid connection start
       if (!connectionStartNodeId || !connectionStartHandleType) return
 
-      // Get the element under the mouse
-      const targetElement = document.elementFromPoint(event.clientX, event.clientY)
+      // Get coordinates safely from MouseEvent or TouchEvent
+      let clientX: number;
+      let clientY: number;
+      if ('touches' in event) {
+        // Handle TouchEvent
+        if (event.touches.length > 0) {
+          clientX = event.touches[0].clientX;
+          clientY = event.touches[0].clientY;
+        } else {
+          // No touch points, cannot proceed
+          return;
+        }
+      } else {
+        // Handle MouseEvent
+        clientX = event.clientX;
+        clientY = event.clientY;
+      }
+
+      // Get the element under the coordinates
+      const targetElement = document.elementFromPoint(clientX, clientY)
       if (!targetElement) return
 
       // Find the closest node element
@@ -312,9 +332,6 @@ function FlowchartCanvasInner() {
       const sourceNode = getNode(connectionStartNodeId)
       const targetNode = getNode(targetNodeId)
       if (!sourceNode || !targetNode) return
-
-      // Remove this line:
-      // const { isValidConnection } = require("@/types/node-model");
 
       // Check if the connection is valid at the node type level
       if (
@@ -336,7 +353,7 @@ function FlowchartCanvasInner() {
       // Create the connection
       const connection: Connection = {
         source: connectionStartNodeId,
-        sourceHandle: connectionStartHandleId || undefined,
+        sourceHandle: connectionStartHandleId,
         target: targetNodeId,
         targetHandle: targetHandleId,
       }
@@ -365,10 +382,8 @@ function FlowchartCanvasInner() {
   /**
    * Handle node mouse enter - highlight the node as a potential connection target
    */
-  const handleNodeMouseEnter = useCallback(
+  const handleNodeMouseEnter: NodeMouseHandler = useCallback(
     (event, node) => {
-      setHoveredNode(node.id)
-
       // If we're currently dragging a connection, highlight this node as a potential target
       if (connectionStartNodeId && connectionStartNodeId !== node.id) {
         const nodeElement = document.querySelector(`[data-id="${node.id}"]`)
@@ -376,9 +391,6 @@ function FlowchartCanvasInner() {
           // Get the source node
           const sourceNode = getNode(connectionStartNodeId)
           const targetNode = node
-
-          // Remove this line:
-          // const { isValidConnection } = require("@/types/node-model");
 
           // Check if this is a valid connection at the node type level
           if (
@@ -408,21 +420,19 @@ function FlowchartCanvasInner() {
         }
       }
     },
-    [connectionStartNodeId, connectionStartHandleId, getNode, getTargetHandle, getEdges],
+    [connectionStartNodeId, connectionStartHandleId, getNode, getTargetHandle, getEdges, setSelectedNodeId],
   )
 
   /**
    * Handle node mouse leave - remove highlight
    */
-  const handleNodeMouseLeave = useCallback((event, node) => {
-    setHoveredNode(null)
-
+  const handleNodeMouseLeave: NodeMouseHandler = useCallback((event, node) => {
     // Remove any connection target classes
     const nodeElement = document.querySelector(`[data-id="${node.id}"]`)
     if (nodeElement) {
       nodeElement.classList.remove("valid-connection-target")
       nodeElement.classList.remove("invalid-connection-target")
-      nodeElement.classList.remove("replace-connection-target") // Add this line
+      nodeElement.classList.remove("replace-connection-target")
     }
   }, [])
 
@@ -430,88 +440,45 @@ function FlowchartCanvasInner() {
 
   // Use throttled context menu handler
   const handleContextMenu = useCallback(
-    throttle((event) => {
-      // Prevent the default context menu
-      event.preventDefault()
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      // Check if the click is on the pane or a node/edge
+      const targetIsPane = (event.target as Element).classList.contains('react-flow__pane');
 
-      // Only show context menu if we're clicking on the canvas, not on a node
-      if (event.target.classList.contains("react-flow__pane")) {
-        // Get the position of the click relative to the canvas
-        const canvasBounds = canvasWrapperRef.current?.getBoundingClientRect()
-        if (canvasBounds) {
-          setContextMenu({ x: event.clientX, y: event.clientY })
-        }
+      if (targetIsPane && canvasWrapperRef.current) {
+        const bounds = canvasWrapperRef.current.getBoundingClientRect();
+        setContextMenu({ x: event.clientX - bounds.left, y: event.clientY - bounds.top });
+      } else {
+        setContextMenu(null); // Hide menu if clicking on node/edge
       }
-    }, 100),
-    [setContextMenu],
-  )
+    },
+    [setContextMenu]
+  );
 
   // Also update the handlePaneClick to clear the selected node type
-  const handlePaneClick = useCallback(() => {
-    clearContextMenu()
-    setSelectedNodeId(null)
-    setSelectedNodeType(null)
-  }, [clearContextMenu, setSelectedNodeId])
-
-  // Add these optimized drag handlers
-  const handleNodeDragStart = useCallback((event: React.MouseEvent, node: any) => {
-    // Check if the event target is an input, textarea, or select
-    const target = event.target as HTMLElement
-    const isInput =
-      target.tagName === "INPUT" ||
-      target.tagName === "TEXTAREA" ||
-      target.tagName === "SELECT" ||
-      target.getAttribute("role") === "combobox" ||
-      target.getAttribute("role") === "listbox" ||
-      target.getAttribute("role") === "option" ||
-      target.classList.contains("prevent-node-drag")
-
-    if (isInput) {
-      // Prevent the drag from starting
-      event.preventDefault()
-      event.stopPropagation()
-      return false
-    }
-
-    // Apply hardware acceleration to the node for smoother dragging
-    const nodeElement = document.querySelector(`[data-id="${node.id}"]`)
-    if (nodeElement) {
-      nodeElement.classList.add("dragging")
-    }
-
-    return true
-  }, [])
-
-  const handleNodeDragStop = useCallback(
-    (event: React.MouseEvent, node: any) => {
-      // Remove hardware acceleration class
-      const nodeElement = document.querySelector(`[data-id="${node.id}"]`)
-      if (nodeElement) {
-        nodeElement.classList.remove("dragging")
-      }
-
-      // Save state after dragging is complete, not during
-      requestAnimationFrame(() => {
-        saveState()
-      })
-    },
-    [saveState],
-  )
+  const handlePaneClick: (event: React.MouseEvent) => void = useCallback(() => {
+    setContextMenu(null);
+    setSelectedNodeId(null);
+  }, [setContextMenu]);
 
   // Use debounced node click handler
   const handleNodeClick = useCallback(
-    debounce((event, node) => {
-      setSelectedNodeId(node.id)
-      setSelectedNodeType(node.type)
-    }, 50),
-    [setSelectedNodeId, setSelectedNodeType],
-  )
+    (event: React.MouseEvent, node: Node) => {
+      // Prevent node selection when interacting with input elements
+      const target = event.target as Element;
+      if (target.closest('.input-wrapper, input, textarea, [contenteditable="true"]')) {
+        return;
+      }
+      setSelectedNodeId(node.id);
+    },
+    [setSelectedNodeId]
+  );
 
   /**
    * Handle copy and paste keyboard shortcuts
    */
   const handleKeyDown = useCallback(
-    (event) => {
+    (event: KeyboardEvent) => {
       // Undo: Ctrl+Z or Cmd+Z
       if ((event.ctrlKey || event.metaKey) && event.key === "z" && !event.shiftKey) {
         event.preventDefault()
@@ -552,7 +519,7 @@ function FlowchartCanvasInner() {
   }, [fitView])
 
   // Handle drag and drop for images
-  const handleDragOver = useCallback((event) => {
+  const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault()
     event.dataTransfer.dropEffect = "copy"
   }, [])
@@ -561,7 +528,7 @@ function FlowchartCanvasInner() {
    * Handle drop of images onto canvas
    */
   const handleDrop = useCallback(
-    (event) => {
+    (event: React.DragEvent) => {
       event.preventDefault()
 
       // Check if files are being dropped
@@ -639,7 +606,7 @@ function FlowchartCanvasInner() {
         }
 
         // Save to Zustand store
-        setClipboard(clipboardData)
+        setClipboard(clipboardData as any)
       }
     }
   }, [selectedNodeId, nodes, setClipboard])
@@ -717,6 +684,24 @@ function FlowchartCanvasInner() {
     }
   }, [setNodes])
 
+  const handleNodeDragStart: NodeDragHandler = useCallback(
+    (/*event, node*/) => {
+      const { isUndoRedoing } = useFlowchartStore.getState()
+      if (!isUndoRedoing) {
+        saveState()
+      }
+    },
+    [saveState],
+  )
+
+  const handleNodeDragStop: NodeDragHandler = useCallback(
+    (/*event, node*/) => {
+      // Ensure this is called after the node position has been updated by React Flow
+      // No explicit action needed here currently, can be used for snapping or validation later
+    },
+    [],
+  )
+
   return (
     <div className="h-screen w-full flex flex-col bg-black font-mono">
       <div className="flex-1 flex">
@@ -731,7 +716,7 @@ function FlowchartCanvasInner() {
             onConnectEnd={handleConnectEnd}
             onNodeMouseEnter={handleNodeMouseEnter}
             onNodeMouseLeave={handleNodeMouseLeave}
-            onEdgeDoubleClick={(event, edge) => {
+            onEdgeDoubleClick={(event: React.MouseEvent, edge: Edge) => {
               // Save state before removing the edge
               saveState()
 
@@ -755,18 +740,19 @@ function FlowchartCanvasInner() {
             connectionLineStyle={{ stroke: "#444", strokeWidth: 1 }}
             selectNodesOnDrag={false}
             nodeDragThreshold={5}
-            selectionMode="partial"
+            selectionMode={SelectionMode.Partial}
             zoomOnDoubleClick={false}
             nodesDraggable={!isInteractingWithInput}
             panOnDrag={!isInteractingWithInput}
             onNodeDragStart={handleNodeDragStart}
-            onNodeDrag={() => {}} // Empty handler for drag event
+            onNodeDrag={() => { /* Placeholder: Add logic if needed, e.g., nodeMovedRef.current = true; Ensure ref is defined */ }}
             onNodeDragStop={handleNodeDragStop}
             connectOnClick={true}
             edgesFocusable={true}
-            connectionMode="loose"
+            connectionMode={ConnectionMode.Loose}
             snapToGrid={true}
             snapGrid={[15, 15]}
+            className="bg-black"
           >
             <Background color="#333" gap={16} />
 
@@ -839,8 +825,8 @@ function FlowchartCanvasInner() {
       {cropImage && (
         <ImageCropModal
           imageUrl={cropImage.dataUrl}
-          onComplete={() => {}} // Empty handler to be implemented
-          onCancel={() => {}} // Empty handler to be implemented
+          onComplete={() => {}}
+          onCancel={() => {}}
         />
       )}
 

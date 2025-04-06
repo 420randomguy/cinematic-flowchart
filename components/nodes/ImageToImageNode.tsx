@@ -2,10 +2,10 @@
 
 import { memo, useEffect, useMemo, useCallback } from "react"
 import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
-import { NodeHeaderSection } from "@/components/sections/NodeHeaderSection"
-import { OutputSection } from "@/components/sections/OutputSection"
-import { SettingsSection } from "@/components/sections/SettingsSection"
-import { ActionsSection } from "@/components/sections/ActionsSection"
+import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
+import { OutputSection } from "@/components/nodes/sections/OutputSection"
+import { SettingsSection } from "@/components/nodes/sections/SettingsSection"
+import { ActionsSection } from "@/components/nodes/sections/ActionsSection"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { TextPreview } from "@/components/ui/text-preview"
 import { useNodeState } from "@/hooks/useNodeState"
@@ -129,7 +129,7 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
 
         {/* Output section with image */}
         <OutputSection
-          title="OUTPUT"
+          title="GENERATED IMAGE"
           imageUrl={imageUrl || data.imageUrl}
           isDragging={isDragging}
           handleDragOver={hasConnectedImageNode ? undefined : handleDragOver}
@@ -139,7 +139,6 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
           isSubmitting={isSubmitting}
           isGenerated={isGenerated}
           requiresImageInput={!imageUrl && !data.imageUrl}
-          data={data}
         />
 
         {/* Text preview */}

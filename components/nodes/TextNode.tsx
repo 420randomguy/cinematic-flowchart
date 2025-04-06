@@ -2,8 +2,8 @@
 
 import { memo, useState, useCallback, useEffect, useMemo } from "react"
 import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
-import { NodeHeaderSection } from "@/components/sections/NodeHeaderSection"
-import { InputSection } from "@/components/sections/InputSection"
+import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
+import { InputSection } from "@/components/nodes/sections/InputSection"
 import { TextInput } from "@/components/ui/TextInput"
 import { useNodeState } from "@/hooks/useNodeState"
 import { useConnectionStore } from "@/store/useConnectionStore"
@@ -12,8 +12,8 @@ import type { NodeProps } from "reactflow"
 import type { TextNodeData } from "@/types/node-types"
 import { useReactFlow } from "reactflow"
 
-// Create stable selector outside the component
-const updateNodeContentSelector = (state: any) => state.updateNodeContent
+// Create stable selector outside the component (Reverted to inline usage)
+// const updateNodeContentSelector = (state: any) => state.updateNodeContent
 
 function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
   // Use the node state hook
@@ -22,8 +22,8 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
   // Local state for text input
   const [promptText, setPromptText] = useState(data.content || "")
   
-  // Get update function from connection store with stable selector
-  const updateNodeContent = useConnectionStore(updateNodeContentSelector)
+  // Get update function from connection store with stable selector (inline)
+  const updateNodeContent = useConnectionStore((state) => state.updateNodeContent)
   const { getEdges, setNodes } = useReactFlow()
 
   // Handle text change with immediate propagation to connected nodes

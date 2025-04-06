@@ -4,10 +4,10 @@ import { memo, useCallback, useState, useEffect, useMemo } from "react"
 import type { NodeProps } from "reactflow"
 import type { VideoNodeData } from "@/types"
 import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
-import { NodeHeaderSection } from "@/components/sections/NodeHeaderSection"
-import { OutputSection } from "@/components/sections/OutputSection"
-import { SettingsSection } from "@/components/sections/SettingsSection"
-import { ActionsSection } from "@/components/sections/ActionsSection"
+import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
+import { OutputSection } from "@/components/nodes/sections/OutputSection"
+import { SettingsSection } from "@/components/nodes/sections/SettingsSection"
+import { ActionsSection } from "@/components/nodes/sections/ActionsSection"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { TextPreview } from "@/components/ui/text-preview"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
@@ -15,6 +15,8 @@ import { useNodeConnections } from "@/hooks/useNodeConnections"
 import { useImageHandling } from "@/hooks/useImageHandling"
 import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
 import { useReactFlow } from "reactflow"
+import { useNodeState } from "@/hooks/useNodeState"
+import { NodeContent } from "@/components/nodes/NodeContent"
 
 // Create stable selector outside the component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
@@ -166,18 +168,16 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
 
         {/* Output section with image/video */}
         <OutputSection
-          title="OUTPUT"
-          imageUrl={imageUrl || data.imageUrl}
-          showVideo={showVideo}
+          title="VIDEO OUTPUT"
+          imageUrl={data.imageUrl}
+          showVideo={true}
           isDragging={isDragging}
-          handleDragOver={hasConnectedImageNode ? undefined : handleDragOver}
-          handleDragLeave={hasConnectedImageNode ? undefined : handleDragLeave}
-          handleDrop={hasConnectedImageNode ? undefined : handleDrop}
-          handleClick={hasConnectedImageNode ? undefined : handleClick}
-          isSubmitting={isSubmitting}
+          handleDragOver={isDragging ? handleDragOver : undefined}
+          handleDragLeave={isDragging ? handleDragLeave : undefined}
+          handleDrop={isDragging ? handleDrop : undefined}
+          handleClick={handleClick}
           isGenerated={isGenerated}
-          requiresImageInput={!imageUrl && !data.imageUrl}
-          data={data}
+          isSubmitting={isSubmitting}
         />
 
         {/* Text preview */}

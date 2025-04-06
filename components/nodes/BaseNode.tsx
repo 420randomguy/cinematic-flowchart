@@ -3,17 +3,16 @@
 import type React from "react"
 
 import { memo, type ReactNode, useEffect, useRef, useCallback, useMemo } from "react"
-import { Position } from "reactflow"
+import { Position, useReactFlow } from "reactflow"
 import { NodeWrapper } from "@/components/shared/NodeWrapper"
-import { NodeHeader } from "@/components/ui/node-header"
+import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
 import { SubmitButton } from "@/components/ui/submit-button"
-import { NodeContent } from "@/components/ui/node-content"
+import { NodeContent } from "@/components/nodes/NodeContent"
 import { NodeSettings } from "@/components/ui/node-settings"
 import { NodeActions } from "@/components/ui/NodeActions"
 import { SourceHandle, TargetHandle } from "@/components/shared/NodeHandles"
 import { useNodeEvents } from "@/hooks/useNodeEvents"
 import { TextPreview } from "@/components/ui/text-preview"
-import { useReactFlow } from "reactflow"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 
 // Simple DOM read function to replace the deleted utility
@@ -242,10 +241,10 @@ function BaseNodeComponent({
   return (
     <NodeWrapper id={id} type={nodeType} isNewNode={data.isNewNode} onClick={handleNodeClick} ref={nodeRef}>
       {/* Node header with type label and model selector */}
-      <NodeHeader
-        title={title || data.title || nodeType.toUpperCase()}
-        type={nodeType}
-        modelId={modelId || data.modelId}
+      <NodeHeaderSection
+        title={propsRef.current.title}
+        type={propsRef.current.nodeType}
+        modelId={propsRef.current.modelId}
         onModelChange={onModelChange}
       />
 

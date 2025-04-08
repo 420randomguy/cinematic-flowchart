@@ -34,6 +34,10 @@ interface FlowchartState {
   // Image crop state
   cropImage: { file: File; dataUrl: string; position: { x: number; y: number }; nodeId?: string } | null
 
+  // Data propagation
+  propagateNodeData: (sourceNode: Node, targetNode: Node, targetHandle: string | null | undefined) => { targetNode: Node, didUpdate: boolean }
+  clearNodeData: (targetNode: Node, sourceNodeType: string | undefined, targetHandle: string | null | undefined) => { targetNode: Node, didUpdate: boolean }
+
   // Actions
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void
   setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void
@@ -77,6 +81,70 @@ export const useFlowchartStore = create<FlowchartState>()(
         connectionStartHandleType: null,
         connectionStartHandleId: null,
         cropImage: null,
+
+        // Data propagation functions
+        propagateNodeData: (sourceNode, targetNode, targetHandle) => {
+          const newData = { ...targetNode.data }; // Clone data object
+          let didUpdate = false;
+
+          const isImageSource = sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image";
+          const isTextSource = sourceNode.type === "text" || sourceNode.type === "url";
+
+          if (isImageSource && targetHandle === 'image') {
+            // Replace existing image connection implicitly
+            newData.sourceImageUrl = sourceNode.data?.imageUrl || null;
+            console.log(`[Store] Propagated sourceImageUrl from ${sourceNode.id} to ${targetNode.id}`);
+            didUpdate = true;
+            // Clear text if replacing with image (optional)
+            // newData.sourceNodeContent = null;  
+          } else if (isTextSource && targetHandle === 'text') {
+            // Replace existing text connection implicitly
+            newData.sourceNodeContent = sourceNode.data?.content || '';
+            console.log(`[Store] Propagated sourceNodeContent from ${sourceNode.id} to ${targetNode.id}`);
+            didUpdate = true;
+            // Clear image if replacing with text (optional)
+            // newData.sourceImageUrl = null;
+          }
+
+          // Return updated node and a flag indicating if any updates were made
+          return { 
+            targetNode: { ...targetNode, data: newData },
+            didUpdate
+          };
+        },
+
+        clearNodeData: (targetNode, sourceNodeType, targetHandle) => {
+          const newData = { ...targetNode.data }; // Clone data
+          let didUpdate = false;
+
+          const isImageSource = sourceNodeType === "image" || sourceNodeType === "text-to-image" || sourceNodeType === "image-to-image";
+          const isTextSource = sourceNodeType === "text" || sourceNodeType === "url";
+
+          if (isImageSource && targetHandle === 'image') {
+            newData.sourceImageUrl = null;
+            console.log(`[Store] Cleared sourceImageUrl on ${targetNode.id}`);
+            didUpdate = true;
+          } else if (isTextSource && targetHandle === 'text') {
+            newData.sourceNodeContent = null;
+            console.log(`[Store] Cleared sourceNodeContent on ${targetNode.id}`);
+            didUpdate = true;
+          } else if (!sourceNodeType) {
+            // If source node type is unknown, clear both potentially
+            if (targetHandle === 'image') {
+              newData.sourceImageUrl = null;
+              didUpdate = true;
+            }
+            if (targetHandle === 'text') {
+              newData.sourceNodeContent = null;
+              didUpdate = true;
+            }
+          }
+
+          return {
+            targetNode: { ...targetNode, data: newData },
+            didUpdate
+          };
+        },
 
         // Actions
         setNodes: (nodes) =>
@@ -123,7 +191,7 @@ export const useFlowchartStore = create<FlowchartState>()(
         },
 
         onEdgesChange: (changes) => {
-          const { isUndoRedoing, nodes } = get()
+          const { isUndoRedoing } = get()
 
           // If we're removing edges, save the current state first
           if (!isUndoRedoing && changes.some((change) => change.type === "remove")) {
@@ -145,28 +213,16 @@ export const useFlowchartStore = create<FlowchartState>()(
                   if (targetNodeIndex !== -1) {
                     const sourceNode = updatedNodes.find(n => n.id === removedEdge.source);
                     const targetNode = updatedNodes[targetNodeIndex];
-                    const newData = { ...targetNode.data }; // Clone data
-
-                    if (sourceNode) {
-                      const isImageSource = sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image";
-                      const isTextSource = sourceNode.type === "text" || sourceNode.type === "url";
-
-                      if (isImageSource && removedEdge.targetHandle === 'image') {
-                        newData.sourceImageUrl = null;
-                        console.log(`[Store] Cleared sourceImageUrl on ${targetNode.id} due to edge removal from ${sourceNode.id}`);
-                      } else if (isTextSource && removedEdge.targetHandle === 'text') {
-                        newData.sourceNodeContent = null;
-                        console.log(`[Store] Cleared sourceNodeContent on ${targetNode.id} due to edge removal from ${sourceNode.id}`);
-                      }
-                    } else {
-                       // If source node not found (e.g., deleted simultaneously), clear both potentially
-                       if (removedEdge.targetHandle === 'image') newData.sourceImageUrl = null;
-                       if (removedEdge.targetHandle === 'text') newData.sourceNodeContent = null;
-                       console.warn(`[Store] Source node ${removedEdge.source} not found during edge removal, clearing data on ${targetNode.id}`);
+                    
+                    const { targetNode: updatedTargetNode, didUpdate } = get().clearNodeData(
+                      targetNode, 
+                      sourceNode?.type, 
+                      removedEdge.targetHandle
+                    );
+                    
+                    if (didUpdate) {
+                      updatedNodes[targetNodeIndex] = updatedTargetNode;
                     }
-
-                    // Update the node immutably
-                    updatedNodes[targetNodeIndex] = { ...targetNode, data: newData };
                   }
                 }
               }
@@ -193,27 +249,16 @@ export const useFlowchartStore = create<FlowchartState>()(
 
             if (sourceNode && targetNodeIndex !== -1) {
               const targetNode = updatedNodes[targetNodeIndex];
-              const newData = { ...targetNode.data }; // Clone data object
-
-              const isImageSource = sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image";
-              const isTextSource = sourceNode.type === "text" || sourceNode.type === "url";
-
-              if (isImageSource && connection.targetHandle === 'image') {
-                 // Replace existing image connection implicitly
-                 newData.sourceImageUrl = sourceNode.data?.imageUrl || null;
-                 console.log(`[Store] Propagated sourceImageUrl from ${sourceNode.id} to ${targetNode.id}`);
-                 // Clear text if replacing with image
-                 // newData.sourceNodeContent = null; // Optional: Decide if image connection should clear text
-              } else if (isTextSource && connection.targetHandle === 'text') {
-                 // Replace existing text connection implicitly
-                 newData.sourceNodeContent = sourceNode.data?.content || '';
-                 console.log(`[Store] Propagated sourceNodeContent from ${sourceNode.id} to ${targetNode.id}`);
-                 // Clear image if replacing with text
-                 // newData.sourceImageUrl = null; // Optional: Decide if text connection should clear image
+              
+              const { targetNode: updatedTargetNode, didUpdate } = get().propagateNodeData(
+                sourceNode,
+                targetNode,
+                connection.targetHandle
+              );
+              
+              if (didUpdate) {
+                updatedNodes[targetNodeIndex] = updatedTargetNode;
               }
-
-              // Update the target node immutably
-              updatedNodes[targetNodeIndex] = { ...targetNode, data: newData };
             }
 
             // Add the new edge

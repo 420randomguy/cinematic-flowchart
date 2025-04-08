@@ -6,6 +6,7 @@ import { useImageLibraryStore } from "@/store/useImageLibraryStore"
 import { useConnections } from "@/contexts/ConnectionContext"
 import { handleDragOver as utilHandleDragOver, handleDragLeave as utilHandleDragLeave } from "@/lib/utils/drag-drop"
 import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
+import { useFlowchartStore } from "@/store/useFlowchartStore"
 
 // ==========================================
 // Node State Hook
@@ -687,6 +688,9 @@ export function useNodeEvents(id, options = {}) {
     setNodes((nodes) => nodes.filter((node) => node.id !== id))
   }, [id, setNodes, options])
 
+  // Get the duplicateNode function from the store
+  const duplicateNode = useFlowchartStore((state) => state.duplicateNode)
+
   // Handle node duplication
   const handleNodeDuplicate = useCallback(() => {
     // Call custom onDuplicate handler if provided
@@ -695,27 +699,9 @@ export function useNodeEvents(id, options = {}) {
       return
     }
 
-    const node = getNode(id)
-    if (!node) return
-
-    const newNodeId = `${node.type}_${Date.now()}`
-    const newPosition = {
-      x: node.position.x + 20,
-      y: node.position.y + 20,
-    }
-
-    const newNode = {
-      ...node,
-      id: newNodeId,
-      position: newPosition,
-      data: {
-        ...node.data,
-        isNewNode: true,
-      },
-    }
-
-    setNodes((nodes) => [...nodes, newNode])
-  }, [id, getNode, setNodes, options])
+    // Use the centralized store function
+    duplicateNode(id)
+  }, [id, duplicateNode, options])
 
   // Handle keyboard events for the selected node
   useEffect(() => {

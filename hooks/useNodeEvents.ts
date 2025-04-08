@@ -12,6 +12,7 @@ export function useNodeEvents(id: string) {
   const { setNodes, getNode } = useReactFlow()
   // Use the store directly
   const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
+  const duplicateNode = useFlowchartStore((state) => state.duplicateNode)
 
   // Handle node selection
   const handleNodeSelect = useCallback(() => {
@@ -32,29 +33,10 @@ export function useNodeEvents(id: string) {
     setNodes((nodes) => nodes.filter((node) => node.id !== id))
   }, [id, setNodes])
 
-  // Handle node duplication
+  // Handle node duplication - now using the centralized store function
   const handleNodeDuplicate = useCallback(() => {
-    const node = getNode(id)
-    if (!node) return
-
-    const newNodeId = `${node.type}_${Date.now()}`
-    const newPosition = {
-      x: node.position.x + 20,
-      y: node.position.y + 20,
-    }
-
-    const newNode = {
-      ...node,
-      id: newNodeId,
-      position: newPosition,
-      data: {
-        ...node.data,
-        isNewNode: true,
-      },
-    }
-
-    setNodes((nodes) => [...nodes, newNode])
-  }, [id, getNode, setNodes])
+    duplicateNode(id)
+  }, [id, duplicateNode])
 
   // Handle keyboard events for the selected node
   useEffect(() => {

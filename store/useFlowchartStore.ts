@@ -38,6 +38,9 @@ interface FlowchartState {
   propagateNodeData: (sourceNode: Node, targetNode: Node, targetHandle: string | null | undefined) => { targetNode: Node, didUpdate: boolean }
   clearNodeData: (targetNode: Node, sourceNodeType: string | undefined, targetHandle: string | null | undefined) => { targetNode: Node, didUpdate: boolean }
 
+  // Node operations
+  duplicateNode: (nodeId: string) => void
+  
   // Actions
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void
   setEdges: (edges: Edge[] | ((prev: Edge[]) => Edge[])) => void
@@ -144,6 +147,57 @@ export const useFlowchartStore = create<FlowchartState>()(
             targetNode: { ...targetNode, data: newData },
             didUpdate
           };
+        },
+
+        // Node operations
+        duplicateNode: (nodeId) => {
+          const node = get().nodes.find(node => node.id === nodeId);
+          if (!node) return;
+
+          // Save state before operation
+          const { isUndoRedoing } = get();
+          if (!isUndoRedoing) {
+            get().saveState();
+          }
+
+          // Generate a new unique ID
+          const newNodeId = `${node.type}_${Date.now()}`;
+          
+          // Create slightly offset position
+          const newPosition = {
+            x: node.position.x + 20,
+            y: node.position.y + 20,
+          };
+
+          // Create the new node
+          const newNode = {
+            ...node,
+            id: newNodeId,
+            position: newPosition,
+            data: {
+              ...node.data,
+              isNewNode: true,
+            },
+            selected: true
+          };
+
+          // Update the nodes array
+          set((state) => ({
+            nodes: [
+              ...state.nodes.map(n => ({
+                ...n,
+                selected: false, // Deselect all other nodes
+                style: {
+                  ...n.style,
+                  filter: undefined, // Remove selection glow
+                }
+              })),
+              newNode,
+            ],
+            selectedNodeId: newNodeId, // Set the new node as selected
+          }));
+
+          console.log(`[Store] Duplicated node ${nodeId} -> ${newNodeId}`);
         },
 
         // Actions

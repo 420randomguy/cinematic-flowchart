@@ -6,63 +6,42 @@ import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection
 import { InputSection } from "@/components/nodes/sections/InputSection"
 import { TextInput } from "@/components/ui/TextInput"
 import { useNodeState } from "@/hooks/useNodeState"
-import { useConnectionStore } from "@/store/useConnectionStore"
+import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { Zap } from "lucide-react"
 import type { NodeProps } from "reactflow"
 import type { TextNodeData } from "@/types/node-types"
-import { useReactFlow } from "reactflow"
 
-// Create stable selector outside the component (Reverted to inline usage)
-// const updateNodeContentSelector = (state: any) => state.updateNodeContent
+// Create stable selector for the store's updateNodeContent function
+const updateNodeContentSelector = (state: any) => state.updateNodeContent
 
 function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
   // Use the node state hook
   const { nodeProps } = useNodeState({ id, data })
+  
+  // Get the centralized update function from the store
+  const updateNodeContent = useFlowchartStore(updateNodeContentSelector)
 
   // Local state for text input
   const [promptText, setPromptText] = useState(data.content || "")
-  
-  // Get update function from connection store with stable selector (inline)
-  const updateNodeContent = useConnectionStore((state) => state.updateNodeContent)
-  const { getEdges, setNodes } = useReactFlow()
 
-  // Handle text change with immediate propagation to connected nodes
+  // Handle text change - use the centralized store for propagation
   const handleTextChange = useCallback(
     (text: string) => {
+      // Update local state
       setPromptText(text)
-
-      // Update this node's content
-      data.content = text
-
-      // Also update directly through ReactFlow for immediate effect
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          // Find nodes that have this node as a source
-          const isTarget = getEdges().some((edge) => edge.source === id && edge.target === node.id)
-          if (isTarget) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                sourceNodeContent: text,
-                _lastUpdated: Date.now(),
-              },
-            }
-          }
-          return node
-        }),
-      )
+      
+      // Update centralized store - this handles propagation to connected nodes
+      updateNodeContent(id, text)
     },
-    [id, data, getEdges, setNodes],
+    [id, updateNodeContent],
   )
 
-  // Initialize content if needed
+  // Initialize local state when component mounts or data changes
   useEffect(() => {
-    // Initialize content if needed
-    if (!data.content && promptText) {
-      data.content = promptText
+    if (data.content && data.content !== promptText) {
+      setPromptText(data.content)
     }
-  }, [promptText, data])
+  }, [data.content, promptText])
 
   return (
     <BaseNodeContainer

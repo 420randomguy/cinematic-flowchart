@@ -26,6 +26,16 @@ interface SavedAsset {
     timestamp: number;
   }
 
+interface UseImageHandlingOptions {
+  id: string
+  data: any
+  handleInputInteraction?: (isInteracting: boolean) => void
+  onImageSelect?: (imageUrl: string) => void
+  onImageUpload?: (file: File, imageUrl: string) => void
+  onDragStateChange?: (isDragging: boolean) => void
+  initialImageUrl?: string | null
+}
+
 /**
  * Unified hook for image handling functionality
  * Handles image selection, upload, and drag-and-drop
@@ -40,17 +50,7 @@ export function useImageHandling({
   updateConnectedNodes = true,
   updateNodeImageUrl,
   handleInputInteraction,
-}: {
-  id: string
-  data: any
-  onImageSelect?: (imageUrl: string) => void
-  onImageUpload?: (file: File, imageUrl: string) => void
-  onDragStateChange?: (isDragging: boolean) => void
-  initialImageUrl?: string
-  updateConnectedNodes?: boolean
-  updateNodeImageUrl?: (nodeId: string, imageUrl: string) => void
-  handleInputInteraction?: (isInteracting?: boolean) => void
-}) {
+}: UseImageHandlingOptions) {
   // State
   const [isDragging, setIsDragging] = useState(false)
   const [showImageSelector, setShowImageSelector] = useState(false)
@@ -207,22 +207,22 @@ export function useImageHandling({
   const selectImage = useCallback(
     (imageUrl: string) => {
       setSelectedImage(imageUrl)
-
-      // Use the provided callback if available
-      if (onImageSelect) {
-        onImageSelect(imageUrl)
-        setShowImageSelector(false)
-        handleInputInteraction?.(false)
-        return
-      }
-
-      // Otherwise, update the node data directly
-      updateNodeWithImage(imageUrl)
+      
+      // Close dialog
       setShowImageSelector(false)
-      handleInputInteraction?.(false)
+      
+      // Update local data
+      if (data) {
+        data.imageUrl = imageUrl;
+      }
+      
+      // Notify parent via callback
+      if (onImageSelect) {
+        onImageSelect(imageUrl);
+      }
     },
-    [onImageSelect, updateNodeWithImage, handleInputInteraction],
-  )
+    [data, setShowImageSelector, onImageSelect]
+  );
 
   // Handle file upload from input
   const handleFileUpload = useCallback(

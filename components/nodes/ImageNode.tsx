@@ -2,23 +2,21 @@
 
 import { memo, useCallback, useEffect, useMemo } from "react"
 import type { NodeProps } from "reactflow"
-import { useReactFlow } from "reactflow"
 import type { ImageNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useImageHandling } from "@/hooks/useImageHandling"
 import { useMemoizedNodeProps } from "@/hooks/useMemoizedNodeProps"
-import { useConnectionStore } from "@/store/useConnectionStore"
 
 // Create stable selectors outside the component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
-const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
+const updateNodeImageSelector = (state: any) => state.updateNodeImage
 
 function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   // Use stores with stable selectors
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
-  const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
+  const updateNodeImage = useFlowchartStore(updateNodeImageSelector)
 
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
@@ -45,40 +43,17 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
     id,
     data,
     handleInputInteraction,
+    onImageSelect: (imageUrl) => {
+      updateNodeImage(id, imageUrl)
+    }
   })
 
-  const { getEdges, setNodes } = useReactFlow()
-
-  // Remove the useEffect that registered image URL with the connection store
-  // Replace it with direct propagation using setNodes
+  // Update store when image URL changes
   useEffect(() => {
     if (data.imageUrl) {
-      // Remove store update
-      // updateNodeImageUrl(id, data.imageUrl) // REMOVED
-
-      // Add direct propagation via ReactFlow
-      const newImageUrl = data.imageUrl
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          // Find nodes that have this node (id) as a source
-          const isTarget = getEdges().some((edge) => edge.source === id && edge.target === node.id)
-          if (isTarget) {
-            console.log(`ImageNode ${id} propagating imageUrl ${newImageUrl} to target ${node.id}`)
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                sourceImageUrl: newImageUrl, // Use sourceImageUrl
-                _lastUpdated: Date.now(),
-              },
-            }
-          }
-          return node
-        }),
-      )
+      updateNodeImage(id, data.imageUrl)
     }
-    // Add getEdges and setNodes to dependencies
-  }, [id, data.imageUrl, getEdges, setNodes])
+  }, [id, data.imageUrl, updateNodeImage])
 
   // Memoize the DOM element reference update to prevent excessive renders
   useEffect(() => {

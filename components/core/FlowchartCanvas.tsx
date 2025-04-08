@@ -115,14 +115,11 @@ function FlowchartCanvasInner() {
     const isImageSource =
       sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image"
 
-    const isTextSource = sourceNode.type === "text" || sourceNode.type === "url"
-    const isUrlSource = sourceNode.type === "url"
+    const isTextSource = sourceNode.type === "text"
 
     // Return the appropriate handle type based on source type
     if (isImageSource) {
       return "image"
-    } else if (isUrlSource) {
-      return "url"
     } else if (isTextSource) {
       return "text"
     }
@@ -238,12 +235,10 @@ function FlowchartCanvasInner() {
           useConnectionStore.getState().updateNodeImageUrl(params.source, sourceNode.data.imageUrl)
         }
 
-        // For text/url nodes, potentially update the store if needed for other reasons
-        if ((sourceNode.type === "text" || sourceNode.type === "url") && sourceNode.data?.content) {
-          console.log(`Propagating content from ${params.source} to ${params.target}:`, sourceNode.data.content)
-
-          // Update the connection store (Keep this if store state is used elsewhere)
-          useConnectionStore.getState().updateNodeContent(params.source, sourceNode.data.content)
+        // For text nodes, potentially update the store if needed for other reasons
+        if (sourceNode.type === "text" && sourceNode.data?.content) {
+          console.log(`Propagating text content from ${params.source} to ${params.target}:`, sourceNode.data.content)
+          // Store update for text content if needed
         }
       }
     },
@@ -784,7 +779,7 @@ function FlowchartCanvasInner() {
                   // Create the node data based on type
                   const nodeData = {
                     title: type.toUpperCase(),
-                    showImage: type !== "text" && type !== "url",
+                    showImage: type !== "text",
                     category: type,
                     seed: Math.floor(Math.random() * 1000000000).toString(),
                     content: "",

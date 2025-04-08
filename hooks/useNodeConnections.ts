@@ -16,40 +16,39 @@ export function useNodeConnections({
   id,
   textHandleId = "text",
   imageHandleId = "image",
-  loraHandleId = "lora",
 }: {
   id: string
   textHandleId?: string
   imageHandleId?: string
-  loraHandleId?: string
 }) {
-  // State for content
-  const [textContent, setTextContent] = useState("")
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
-  const [loraContent, setLoraContent] = useState<string | null>(null)
-
-  // ReactFlow hooks
-  const { setNodes, getNodes, getEdges } = useReactFlow()
-
-  // Connection store with stable selectors
+  // Use ReactFlow and ConnectionStore hooks
+  const { getNodes, getEdges, setNodes } = useReactFlow()
+  const getNodeContent = useConnectionStore(getNodeContentSelector)
   const getNodeImageUrl = useConnectionStore(getNodeImageUrlSelector)
   const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
 
-  // Get connected nodes using ReactFlow's getEdges directly
+  // Local state for content
+  const [textContent, setTextContent] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+
+  // Get connected nodes
   const connectedNodes = useMemo(() => {
     const edges = getEdges()
-
-    // Get source nodes (nodes that connect to this node)
-    const sourceNodes = edges.filter((edge) => edge.target === id).map((edge) => edge.source)
-
-    // Get target nodes (nodes that this node connects to)
-    const targetNodes = edges.filter((edge) => edge.source === id).map((edge) => edge.target)
-
-    // Get nodes by type
     const nodes = getNodes()
+
+    // Find all nodes that are connected to this node
+    const sourceNodes = edges
+      .filter((edge) => edge.target === id)
+      .map((edge) => edge.source)
+
+    const targetNodes = edges
+      .filter((edge) => edge.source === id)
+      .map((edge) => edge.target)
+
+    // Filter source nodes by type
     const textNodes = sourceNodes.filter((nodeId) => {
       const node = nodes.find((n) => n.id === nodeId)
-      return node?.type === "text" || node?.type === "url"
+      return node?.type === "text"
     })
 
     const imageNodes = sourceNodes.filter((nodeId) => {
@@ -57,17 +56,11 @@ export function useNodeConnections({
       return node?.type === "image" || node?.type === "text-to-image" || node?.type === "image-to-image"
     })
 
-    const loraNodes = sourceNodes.filter((nodeId) => {
-      const node = nodes.find((n) => n.id === nodeId)
-      return node?.type === "url"
-    })
-
     return {
       sourceNodes,
       targetNodes,
       textNodes,
       imageNodes,
-      loraNodes,
     }
   }, [getEdges, getNodes, id])
 
@@ -184,17 +177,14 @@ export function useNodeConnections({
     // Connection data
     connectedTextNode: connectedNodes.textNodes[0] || null,
     connectedImageNode: connectedNodes.imageNodes[0] || null,
-    connectedLoraNode: connectedNodes.loraNodes[0] || null,
 
     // Connected nodes arrays
     connectedTextNodes: connectedNodes.textNodes,
     connectedImageNodes: connectedNodes.imageNodes,
-    connectedLoraNodes: connectedNodes.loraNodes,
 
     // Content data
     textContent,
     imageUrl,
-    loraContent,
 
     // Functions
     updateNodeContent: updateContent,

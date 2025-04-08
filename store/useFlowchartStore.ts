@@ -91,7 +91,7 @@ export const useFlowchartStore = create<FlowchartState>()(
           let didUpdate = false;
 
           const isImageSource = sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image";
-          const isTextSource = sourceNode.type === "text" || sourceNode.type === "url";
+          const isTextSource = sourceNode.type === "text";
 
           if (isImageSource && targetHandle === 'image') {
             // Replace existing image connection implicitly
@@ -121,7 +121,7 @@ export const useFlowchartStore = create<FlowchartState>()(
           let didUpdate = false;
 
           const isImageSource = sourceNodeType === "image" || sourceNodeType === "text-to-image" || sourceNodeType === "image-to-image";
-          const isTextSource = sourceNodeType === "text" || sourceNodeType === "url";
+          const isTextSource = sourceNodeType === "text";
 
           if (isImageSource && targetHandle === 'image') {
             newData.sourceImageUrl = null;

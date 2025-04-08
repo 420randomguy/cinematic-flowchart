@@ -3,7 +3,6 @@
 export type NodeCategory =
   | "text"
   | "image"
-  | "url"
   | "text-to-image"
   | "image-to-image"
   | "text-to-video"
@@ -13,7 +12,6 @@ export type NodeCategory =
 export interface NodeConnectionRules {
   acceptsTextInput: boolean
   acceptsImageInput: boolean
-  acceptsUrlInput: boolean
   outputsText: boolean
   outputsImage: boolean
   outputsVideo: boolean
@@ -33,7 +31,6 @@ export const NODE_MODELS: Record<
     rules: {
       acceptsTextInput: false,
       acceptsImageInput: false,
-      acceptsUrlInput: false,
       outputsText: true,
       outputsImage: false,
       outputsVideo: false,
@@ -45,21 +42,8 @@ export const NODE_MODELS: Record<
     rules: {
       acceptsTextInput: false,
       acceptsImageInput: false,
-      acceptsUrlInput: false,
       outputsText: false,
       outputsImage: true,
-      outputsVideo: false,
-    },
-    defaultSettings: {},
-  },
-  url: {
-    title: "URL",
-    rules: {
-      acceptsTextInput: false,
-      acceptsImageInput: false,
-      acceptsUrlInput: false,
-      outputsText: false,
-      outputsImage: false,
       outputsVideo: false,
     },
     defaultSettings: {},
@@ -69,7 +53,6 @@ export const NODE_MODELS: Record<
     rules: {
       acceptsTextInput: true,
       acceptsImageInput: false,
-      acceptsUrlInput: true,
       outputsText: false,
       outputsImage: true,
       outputsVideo: false,
@@ -85,7 +68,6 @@ export const NODE_MODELS: Record<
     rules: {
       acceptsTextInput: true,
       acceptsImageInput: true,
-      acceptsUrlInput: true,
       outputsText: false,
       outputsImage: true,
       outputsVideo: false,
@@ -102,7 +84,6 @@ export const NODE_MODELS: Record<
     rules: {
       acceptsTextInput: true,
       acceptsImageInput: false,
-      acceptsUrlInput: true,
       outputsText: false,
       outputsImage: false,
       outputsVideo: true,
@@ -118,7 +99,6 @@ export const NODE_MODELS: Record<
     rules: {
       acceptsTextInput: true,
       acceptsImageInput: true,
-      acceptsUrlInput: true,
       outputsText: false,
       outputsImage: false,
       outputsVideo: true,
@@ -138,7 +118,6 @@ export function getTargetHandles(nodeType: NodeCategory): string[] {
 
   if (rules.acceptsTextInput) handles.push("text")
   if (rules.acceptsImageInput) handles.push("image")
-  if (rules.acceptsUrlInput) handles.push("url")
 
   return handles
 }
@@ -175,11 +154,6 @@ export function isValidConnection(
 
   // Image output to image input
   if (sourceRules.outputsImage && targetRules.acceptsImageInput && (!targetHandle || targetHandle === "image")) {
-    return true
-  }
-
-  // URL output to URL input
-  if (sourceNodeType === "url" && targetRules.acceptsUrlInput && (!targetHandle || targetHandle === "url")) {
     return true
   }
 

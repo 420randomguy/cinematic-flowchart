@@ -3,7 +3,6 @@ import { createLazyComponent } from "./code-splitting"
 // Lazy load node components
 const TextNode = createLazyComponent(() => import("@/components/nodes/TextNode"))
 const ImageNode = createLazyComponent(() => import("@/components/nodes/ImageNode"))
-const URLNode = createLazyComponent(() => import("@/components/nodes/URLNode"))
 const ImageToVideoNode = createLazyComponent(() => import("@/components/nodes/ImageToVideoNode"))
 const TextToVideoNode = createLazyComponent(() => import("@/components/nodes/TextToVideoNode"))
 const TextToImageNode = createLazyComponent(() => import("@/components/nodes/TextToImageNode"))
@@ -14,7 +13,6 @@ export const nodeTypes = {
   // Input Nodes
   text: TextNode,
   image: ImageNode,
-  url: URLNode,
 
   // Output Nodes
   "image-to-video": ImageToVideoNode,

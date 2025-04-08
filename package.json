@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "echo '⚠️ Click the debug panel and clear cache if you run into storage quota issues!' && next dev",
+    "clear-storage": "echo '⚠️ Use the debug panel to clear cache if you run into storage quota issues!'",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

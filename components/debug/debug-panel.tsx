@@ -56,16 +56,20 @@ export default function DebugPanel() {
 
     // Simulate clearing cache
     setTimeout(() => {
-      // Clear relevant localStorage items
-      localStorage.removeItem("savedImages")
-      localStorage.removeItem("flowchart_state")
+      try {
+        // Clear ALL localStorage items
+        localStorage.clear();
+        console.log("Cleared all localStorage items");
 
-      // You can add more cache clearing logic here
+        setIsClearing(false)
 
-      setIsClearing(false)
-
-      // Show success message or update UI
-      alert("Cache cleared successfully")
+        // Show success message
+        alert("All application data cleared successfully")
+      } catch (error) {
+        console.error("Error clearing localStorage:", error);
+        alert("Error clearing cache. See console for details.");
+        setIsClearing(false)
+      }
     }, 1000)
   }
 

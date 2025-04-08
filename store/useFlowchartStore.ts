@@ -562,9 +562,22 @@ export const useFlowchartStore = create<FlowchartState>()(
       {
         name: "flowchart-storage",
         partialize: (state) => ({
-          nodes: state.nodes,
+          // Only persist minimal node data and edges
+          nodes: state.nodes.map(node => ({
+            id: node.id,
+            type: node.type,
+            position: node.position,
+            // Don't persist data that can be large
+            data: {
+              title: node.data?.title,
+              category: node.data?.category,
+              // Only save model ID, not full settings data
+              modelId: node.data?.modelId,
+              // Don't save image URLs or content
+            },
+          })),
           edges: state.edges,
-          // Don't persist certain transient states
+          // Don't persist transient states
           selectedNodeId: null,
           contextMenu: null,
           isDragging: false,

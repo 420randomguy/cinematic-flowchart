@@ -40,6 +40,15 @@ interface FlowchartState {
 
   // Node operations
   duplicateNode: (nodeId: string) => void
+  deleteNode: (nodeId: string) => void
+  
+  // Node state management
+  updateNodeQuality: (nodeId: string, quality: number) => void
+  updateNodeStrength: (nodeId: string, strength: number) => void
+  updateNodeModel: (nodeId: string, modelId: string) => void
+  updateNodeModelSettings: (nodeId: string, settings: Record<string, any>) => void
+  updateNodeContent: (nodeId: string, content: string) => void
+  updateNodeImage: (nodeId: string, imageUrl: string) => void
   
   // Actions
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void
@@ -198,6 +207,143 @@ export const useFlowchartStore = create<FlowchartState>()(
           }));
 
           console.log(`[Store] Duplicated node ${nodeId} -> ${newNodeId}`);
+        },
+
+        deleteNode: (nodeId) => {
+          const { isUndoRedoing } = get();
+          if (!isUndoRedoing) {
+            get().saveState();
+          }
+
+          // Remove the node
+          set((state) => ({
+            nodes: state.nodes.filter(node => node.id !== nodeId),
+            // Also remove any edges connected to this node
+            edges: state.edges.filter(edge => edge.source !== nodeId && edge.target !== nodeId)
+          }));
+          
+          console.log(`[Store] Deleted node ${nodeId}`);
+        },
+
+        // Node state management functions
+        updateNodeQuality: (nodeId, quality) => {
+          set((state) => ({
+            nodes: state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, quality } } 
+                : node
+            )
+          }));
+        },
+        
+        updateNodeStrength: (nodeId, strength) => {
+          set((state) => ({
+            nodes: state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, strength } } 
+                : node
+            )
+          }));
+        },
+        
+        updateNodeModel: (nodeId, modelId) => {
+          set((state) => ({
+            nodes: state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, modelId } } 
+                : node
+            )
+          }));
+        },
+        
+        updateNodeModelSettings: (nodeId, modelSettings) => {
+          set((state) => ({
+            nodes: state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, modelSettings } } 
+                : node
+            )
+          }));
+        },
+        
+        updateNodeContent: (nodeId, content) => {
+          const { isUndoRedoing } = get();
+          if (!isUndoRedoing) {
+            get().saveState();
+          }
+
+          // Update the node content
+          set((state) => {
+            // First update the source node
+            const updatedNodes = state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, content } } 
+                : node
+            );
+            
+            // Then propagate to all target nodes
+            const targetNodeIds = state.edges
+              .filter(edge => edge.source === nodeId && edge.targetHandle === 'text')
+              .map(edge => edge.target);
+              
+            return {
+              nodes: updatedNodes.map(node => {
+                if (targetNodeIds.includes(node.id)) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      sourceNodeContent: content,
+                      _lastUpdated: Date.now()
+                    }
+                  };
+                }
+                return node;
+              })
+            };
+          });
+          
+          console.log(`[Store] Updated and propagated content for node ${nodeId}`);
+        },
+        
+        updateNodeImage: (nodeId, imageUrl) => {
+          const { isUndoRedoing } = get();
+          if (!isUndoRedoing) {
+            get().saveState();
+          }
+
+          // Update the node image
+          set((state) => {
+            // First update the source node
+            const updatedNodes = state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, imageUrl } } 
+                : node
+            );
+            
+            // Then propagate to all target nodes
+            const targetNodeIds = state.edges
+              .filter(edge => edge.source === nodeId && edge.targetHandle === 'image')
+              .map(edge => edge.target);
+              
+            return {
+              nodes: updatedNodes.map(node => {
+                if (targetNodeIds.includes(node.id)) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      sourceImageUrl: imageUrl,
+                      _lastUpdated: Date.now()
+                    }
+                  };
+                }
+                return node;
+              })
+            };
+          });
+          
+          console.log(`[Store] Updated and propagated image for node ${nodeId}`);
         },
 
         // Actions

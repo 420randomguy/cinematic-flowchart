@@ -3,14 +3,15 @@
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useReactFlow } from "reactflow"
 import { useConnectionStore } from "@/store/useConnectionStore"
+import { useFlowchartStore } from "@/store/useFlowchartStore"
 
-// Create stable selectors outside the hook
-const getNodeContentSelector = (state: any) => state.getNodeContent
-const getNodeImageUrlSelector = (state: any) => state.getNodeImageUrl
-const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
+// Create stable selectors for the store
+const updateNodeContentSelector = (state: any) => state.updateNodeContent
+const updateNodeImageSelector = (state: any) => state.updateNodeImage
 
 /**
  * Unified hook for handling node connections and content monitoring
+ * Now a thin wrapper around the central store
  */
 export function useNodeConnections({
   id,
@@ -21,17 +22,18 @@ export function useNodeConnections({
   textHandleId?: string
   imageHandleId?: string
 }) {
-  // Use ReactFlow and ConnectionStore hooks
-  const { getNodes, getEdges, setNodes } = useReactFlow()
-  const getNodeContent = useConnectionStore(getNodeContentSelector)
-  const getNodeImageUrl = useConnectionStore(getNodeImageUrlSelector)
-  const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
+  // Use ReactFlow and Store hooks
+  const { getNodes, getEdges } = useReactFlow()
+  
+  // Use the centralized store functions
+  const updateNodeContent = useFlowchartStore(updateNodeContentSelector)
+  const updateNodeImage = useFlowchartStore(updateNodeImageSelector)
 
-  // Local state for content
+  // Local state for tracking connected content
   const [textContent, setTextContent] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
 
-  // Get connected nodes
+  // Get connected nodes - keep this logic for analyzing connections
   const connectedNodes = useMemo(() => {
     const edges = getEdges()
     const nodes = getNodes()
@@ -64,114 +66,42 @@ export function useNodeConnections({
     }
   }, [getEdges, getNodes, id])
 
-  // Listen for image updates from connected nodes
-  useEffect(() => {
-    const handleImageUpdate = (event: CustomEvent) => {
-      const { sourceNodeId, imageUrl, targetNodeIds } = event.detail
-
-      // Check if this node is a target of the update
-      if (targetNodeIds.includes(id)) {
-        setImageUrl(imageUrl)
-
-        // Update the node data
-        setNodes((nodes) =>
-          nodes.map((node) =>
-            node.id === id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    imageUrl: imageUrl,
-                    _lastUpdated: Date.now(),
-                  },
-                }
-              : node,
-          ),
-        )
-      }
-    }
-
-    // Listen for image updates
-    window.addEventListener("flowchart-image-update", handleImageUpdate as EventListener)
-
-    return () => {
-      window.removeEventListener("flowchart-image-update", handleImageUpdate as EventListener)
-    }
-  }, [id, setNodes])
-
-  // Check for initial image from connected nodes
-  useEffect(() => {
-    if (connectedNodes.imageNodes.length > 0) {
-      const sourceNodeId = connectedNodes.imageNodes[0]
-
-      // Get the node directly from ReactFlow
-      const nodes = getNodes()
-      const sourceNode = nodes.find((n) => n.id === sourceNodeId)
-
-      if (sourceNode?.data?.imageUrl) {
-        const url = sourceNode.data.imageUrl
-
-        if (url && url !== imageUrl) {
-          setImageUrl(url)
-
-          // Update the node data
-          setNodes((nodes) =>
-            nodes.map((node) =>
-              node.id === id
-                ? {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      imageUrl: url,
-                      _lastUpdated: Date.now(),
-                    },
-                  }
-                : node,
-            ),
-          )
-        }
-      }
-    }
-  }, [connectedNodes.imageNodes, getNodes, id, imageUrl, setNodes])
-
-  // Function to update node content AND PROPAGATE VIA setNodes
-  const updateContent = useCallback(
+  // Create wrapper functions that call the centralized store
+  const updateContentWrapper = useCallback(
     (content: string) => {
-      // Update local state if needed
+      // Update local state for the hook consumers
       setTextContent(content)
-
-      // ADD direct propagation via ReactFlow
-      setNodes((nodes) =>
-        nodes.map((node) => {
-          // Find nodes that have this node (id) as a source
-          const isTarget = getEdges().some((edge) => edge.source === id && edge.target === node.id)
-          if (isTarget) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                sourceNodeContent: content, // Set the source content
-                _lastUpdated: Date.now(),
-              },
-            }
-          }
-          return node
-        }),
-      )
+      
+      // Use the centralized store to update and propagate
+      updateNodeContent(id, content)
     },
-    [id, getEdges, setNodes], // Update dependencies
+    [id, updateNodeContent],
   )
 
-  // Function to update node image URL
-  const updateImage = useCallback(
+  const updateImageWrapper = useCallback(
     (url: string) => {
-      if (url !== imageUrl) {
-        setImageUrl(url)
-        updateNodeImageUrl(id, url)
-      }
+      // Update local state for the hook consumers
+      setImageUrl(url)
+      
+      // Use the centralized store to update and propagate
+      updateNodeImage(id, url)
     },
-    [id, imageUrl, updateNodeImageUrl],
+    [id, updateNodeImage],
   )
+
+  // Initialize state based on node data
+  useEffect(() => {
+    // Find this node to get its current data
+    const thisNode = getNodes().find(node => node.id === id)
+    if (thisNode) {
+      if (thisNode.data.content && thisNode.data.content !== textContent) {
+        setTextContent(thisNode.data.content)
+      }
+      if (thisNode.data.imageUrl && thisNode.data.imageUrl !== imageUrl) {
+        setImageUrl(thisNode.data.imageUrl)
+      }
+    }
+  }, [id, getNodes, textContent, imageUrl])
 
   return {
     // Connection data
@@ -186,9 +116,9 @@ export function useNodeConnections({
     textContent,
     imageUrl,
 
-    // Functions
-    updateNodeContent: updateContent,
-    updateNodeImageUrl: updateImage,
+    // Functions - using centralized store logic now
+    updateNodeContent: updateContentWrapper,
+    updateNodeImageUrl: updateImageWrapper,
 
     // Monitoring status
     hasConnectedSources: connectedNodes.sourceNodes.length > 0,

@@ -4,18 +4,31 @@ import { useCallback, useEffect } from "react"
 import { useReactFlow } from "reactflow"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 
+// Create stable selectors for the store
+const handleInputInteractionSelector = (state: any) => state.handleInputInteraction
+const duplicateNodeSelector = (state: any) => state.duplicateNode
+const setSelectedNodeIdSelector = (state: any) => state.setSelectedNodeId
+const deleteNodeSelector = (state: any) => state.deleteNode
+
 /**
  * Hook for standardized node event handling
- * Provides consistent event handlers for node interactions
+ * Now mostly a thin wrapper around the central store
  */
 export function useNodeEvents(id: string) {
   const { setNodes, getNode } = useReactFlow()
-  // Use the store directly
-  const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
-  const duplicateNode = useFlowchartStore((state) => state.duplicateNode)
+  
+  // Use store functions
+  const handleInputInteraction = useFlowchartStore(handleInputInteractionSelector)
+  const duplicateNode = useFlowchartStore(duplicateNodeSelector)
+  const setSelectedNodeId = useFlowchartStore(setSelectedNodeIdSelector)
+  const deleteNode = useFlowchartStore(deleteNodeSelector)
 
-  // Handle node selection
+  // Handle node selection - update both ReactFlow and our store
   const handleNodeSelect = useCallback(() => {
+    // Set selected node ID in our store
+    setSelectedNodeId(id)
+    
+    // Also update ReactFlow's internal selection state for visual feedback
     setNodes((nodes) =>
       nodes.map((node) => ({
         ...node,
@@ -26,14 +39,14 @@ export function useNodeEvents(id: string) {
         },
       })),
     )
-  }, [id, setNodes])
+  }, [id, setNodes, setSelectedNodeId])
 
-  // Handle node deletion
+  // Handle node deletion - now using the centralized store function
   const handleNodeDelete = useCallback(() => {
-    setNodes((nodes) => nodes.filter((node) => node.id !== id))
-  }, [id, setNodes])
+    deleteNode(id)
+  }, [id, deleteNode])
 
-  // Handle node duplication - now using the centralized store function
+  // Handle node duplication - using the centralized store function
   const handleNodeDuplicate = useCallback(() => {
     duplicateNode(id)
   }, [id, duplicateNode])

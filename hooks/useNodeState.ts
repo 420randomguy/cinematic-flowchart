@@ -3,8 +3,12 @@
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 
-// Create stable selector outside the hook
+// Create stable selectors for the store actions
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
+const updateNodeQualitySelector = (state: any) => state.updateNodeQuality
+const updateNodeStrengthSelector = (state: any) => state.updateNodeStrength
+const updateNodeModelSelector = (state: any) => state.updateNodeModel
+const updateNodeModelSettingsSelector = (state: any) => state.updateNodeModelSettings
 
 interface UseNodeStateProps {
   id: string
@@ -13,12 +17,22 @@ interface UseNodeStateProps {
 }
 
 /**
- * Hook for managing node state
+ * Hook for managing node state (now as a thin wrapper around the central store)
  */
 export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
-  // Use the store with stable selector
+  // Use the store with stable selectors
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  const updateNodeQuality = useFlowchartStore(updateNodeQualitySelector)
+  const updateNodeStrength = useFlowchartStore(updateNodeStrengthSelector)
+  const updateNodeModel = useFlowchartStore(updateNodeModelSelector)
+  const updateNodeModelSettings = useFlowchartStore(updateNodeModelSettingsSelector)
   
+  // Keep some local state for UI interactions that don't need persistence
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGenerated, setIsGenerated] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState(5)
+  
+  // Create wrapper functions that call the store
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
       setIsInteractingWithInput(isInteracting);
@@ -26,36 +40,24 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
     [setIsInteractingWithInput]
   );
 
-  // Basic state
-  const [quality, setQuality] = useState(data.quality || 80)
-  const [seed] = useState(data.seed || Math.floor(Math.random() * 1000000000).toString())
-  const [isNewNode] = useState(data.isNewNode || false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isGenerated, setIsGenerated] = useState(false)
-  const [timeRemaining, setTimeRemaining] = useState(5)
-  const [strength, setStrength] = useState(data.strength || 70)
-  const [selectedModelId, setSelectedModelId] = useState(initialModelId || data.modelId || "flux-dev")
-  const [modelSettings, setModelSettings] = useState(data.modelSettings || {})
+  // Create wrappers around store functions
+  const setQuality = useCallback((quality: number) => {
+    updateNodeQuality(id, quality);
+  }, [id, updateNodeQuality]);
+  
+  const setStrength = useCallback((strength: number) => {
+    updateNodeStrength(id, strength);
+  }, [id, updateNodeStrength]);
+  
+  const handleModelChange = useCallback((modelId: string) => {
+    updateNodeModel(id, modelId);
+  }, [id, updateNodeModel]);
+  
+  const handleSettingsChange = useCallback((settings: any) => {
+    updateNodeModelSettings(id, settings);
+  }, [id, updateNodeModelSettings]);
 
-  // Handle model change
-  const handleModelChange = useCallback(
-    (modelId: string) => {
-      setSelectedModelId(modelId)
-      data.modelId = modelId
-    },
-    [data],
-  )
-
-  // Handle settings change
-  const handleSettingsChange = useCallback(
-    (settings: any) => {
-      setModelSettings(settings)
-      data.modelSettings = settings
-    },
-    [data],
-  )
-
-  // Handle submit toggle
+  // Handle submit toggle (keep this local since it's just UI state)
   const handleSubmitToggle = useCallback(() => {
     if (isSubmitting) {
       setIsSubmitting(false)
@@ -96,31 +98,8 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
     }
   }, [isSubmitting, isGenerated])
 
-  // Update data when quality changes
-  useEffect(() => {
-    data.quality = quality
-  }, [data, quality])
-
-  // Update data when strength changes
-  useEffect(() => {
-    if (strength !== undefined) {
-      data.strength = strength
-    }
-  }, [data, strength])
-
-  // Ensure data is updated when state changes
-  useEffect(() => {
-    // Ensure data is updated when state changes
-    if (data) {
-      data.quality = quality
-      data.strength = strength
-      data.modelId = selectedModelId
-      data.modelSettings = modelSettings
-    }
-  }, [data, quality, strength, selectedModelId, modelSettings])
-
   // Memoize common node props to prevent unnecessary re-renders
-  const nodeProps = {
+  const nodeProps = useMemo(() => ({
     title: data.title || "",
     content: data.content || "",
     imageUrl: data.imageUrl || null,
@@ -129,21 +108,21 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
     modelId: data.modelId || "default",
     modelSettings: data.modelSettings || {},
     sourceNodeContent: data.sourceNodeContent || "",
-  }
+  }), [data]);
 
   return {
-    quality,
+    quality: data.quality || 80,
     setQuality,
-    seed,
-    isNewNode,
+    seed: data.seed || Math.floor(Math.random() * 1000000000).toString(),
+    isNewNode: data.isNewNode || false,
     isSubmitting,
     timeRemaining,
     isGenerated,
     handleSubmitToggle,
-    strength,
+    strength: data.strength || 70,
     setStrength,
-    selectedModelId,
-    modelSettings,
+    selectedModelId: data.modelId || initialModelId || "flux-dev",
+    modelSettings: data.modelSettings || {},
     handleModelChange,
     handleSettingsChange,
     handleInputInteraction,

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo } from "react"
 import ReactFlow, {
   Background,
   ReactFlowProvider,
@@ -101,6 +101,9 @@ function FlowchartCanvasInner() {
   useEffect(() => {
     setCurrentNodesAndEdges(nodes, edges)
   }, [nodes, edges, setCurrentNodesAndEdges])
+
+  // Memoize nodeTypes to prevent recreation on each render
+  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
   /**
    * Determine the appropriate target handle based on source and target node types
@@ -712,7 +715,7 @@ function FlowchartCanvasInner() {
               // Remove the edge
               onEdgesChange([{ id: edge.id, type: "remove" }])
             }}
-            nodeTypes={nodeTypes}
+            nodeTypes={memoizedNodeTypes}
             fitView
             defaultViewport={{ x: 0, y: 0, zoom: 1 }}
             fitViewOptions={{

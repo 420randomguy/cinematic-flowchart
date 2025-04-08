@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, useRef, useEffect } from "react"
-import { FileText, Image, Video, Wand2, Layers, X, Link } from "lucide-react"
+import { FileText, Image, Video, Wand2, Layers, X } from "lucide-react"
 
 interface CanvasContextMenuProps {
   position: { x: number; y: number; sourceNodeId?: string }
@@ -72,15 +72,6 @@ function CanvasContextMenu({ position, onClose, onAddNode, sourceNodeId }: Canva
         >
           <FileText className="h-3.5 w-3.5 text-gray-500" />
           <span>Text</span>
-        </button>
-
-        {/* URL Node */}
-        <button
-          className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 rounded-sm"
-          onClick={() => onAddNode("url")}
-        >
-          <Link className="h-3.5 w-3.5 text-gray-500" />
-          <span>URL</span>
         </button>
 
         {/* Image Node */}

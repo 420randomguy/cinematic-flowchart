@@ -18,10 +18,28 @@ const TextInput = forwardRef<HTMLTextAreaElement, TextInputProps>(
   ({ value, onChange, placeholder = "Enter your prompt here...", maxChars = 4000, className = "" }, ref) => {
     // Use the store directly
     const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
-    const inputProps = createInputProps(handleInputInteraction)
 
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const [text, setText] = useState(value || "")
+
+    // Create input props first
+    const baseInputProps = createInputProps(handleInputInteraction)
+
+    // Merge our custom keyDown handler with any existing from inputProps
+    const mergedInputProps = {
+      ...baseInputProps,
+      onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Call the original onKeyDown handler if it exists
+        if (baseInputProps.onKeyDown) {
+          baseInputProps.onKeyDown(e);
+        }
+        
+        // Prevent default for Cmd+D/Ctrl+D to allow node duplication to work
+        if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+          e.preventDefault();
+        }
+      }
+    };
 
     // Auto-resize textarea based on content
     useEffect(() => {
@@ -50,7 +68,7 @@ const TextInput = forwardRef<HTMLTextAreaElement, TextInputProps>(
             className="w-full min-h-[60px] bg-black text-[9px] text-gray-300 p-1.5 rounded-sm resize-none focus:outline-none focus:ring-1 focus:ring-gray-700 overflow-hidden prevent-node-drag"
             placeholder={placeholder}
             style={{ height: "auto" }}
-            {...inputProps}
+            {...mergedInputProps}
           />
           <div className="absolute bottom-1 right-1 text-[8px] text-gray-500">
             {text.length}/{maxChars}

@@ -1,13 +1,15 @@
 "use client"
 
-import { memo, useCallback, useEffect, useMemo } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef } from "react"
 import type { NodeProps } from "reactflow"
+import { useReactFlow } from 'reactflow';
 import type { ImageNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useImageHandling } from "@/hooks/useImageHandling"
 import { useMemoizedNodeProps } from "@/hooks/useMemoizedNodeProps"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // Create stable selectors outside the component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
@@ -17,6 +19,12 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   // Use stores with stable selectors
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
   const updateNodeImage = useFlowchartStore(updateNodeImageSelector)
+  
+  // Get functions from visual mirror store
+  const { showContent } = useVisualMirrorStore()
+
+  // Get getEdges function from React Flow
+  const { getEdges } = useReactFlow();
 
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
@@ -43,26 +51,25 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
     id,
     data,
     handleInputInteraction,
-    onImageSelect: (imageUrl) => {
-      updateNodeImage(id, imageUrl)
-    }
+    onImageSelect: useCallback((imageUrl: string) => {
+        // Update centralized store (handles persistent data propagation)
+        updateNodeImage(id, imageUrl);
+        
+        // Update visual mirror for this node
+        showContent(id, { imageUrl });
+        
+        // Find connected target nodes and update their visual content
+        const currentEdges = getEdges();
+        const targetNodeIds = currentEdges
+          .filter(edge => edge.source === id)
+          .map(edge => edge.target);
+          
+        // Update visual mirror for each connected target node
+        targetNodeIds.forEach(targetId => {
+          showContent(targetId, { imageUrl });
+        });
+      }, [id, updateNodeImage, getEdges, showContent]),
   })
-
-  // Update store when image URL changes
-  useEffect(() => {
-    if (data.imageUrl) {
-      updateNodeImage(id, data.imageUrl)
-    }
-  }, [id, data.imageUrl, updateNodeImage])
-
-  // Memoize the DOM element reference update to prevent excessive renders
-  useEffect(() => {
-    // Find the node content container element once the component is mounted
-    const nodeContentContainer = document.querySelector(`[data-node-id="${id}"] .node-content-container`)
-    if (dropRef?.current !== nodeContentContainer && nodeContentContainer) {
-      dropRef.current = nodeContentContainer as HTMLDivElement
-    }
-  }, [id, dropRef])
 
   return (
     <>

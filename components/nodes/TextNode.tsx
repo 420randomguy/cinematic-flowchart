@@ -9,7 +9,9 @@ import { useNodeState } from "@/hooks/useNodeState"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { Zap } from "lucide-react"
 import type { NodeProps } from "reactflow"
+import { useReactFlow } from 'reactflow'
 import type { TextNodeData } from "@/types/node-types"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // Create stable selector for the store's updateNodeContent function
 const updateNodeContentSelector = (state: any) => state.updateNodeContent
@@ -20,20 +22,40 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
   
   // Get the centralized update function from the store
   const updateNodeContent = useFlowchartStore(updateNodeContentSelector)
+  
+  // Get getEdges function from React Flow
+  const { getEdges } = useReactFlow()
+
+  // Get the showContent function from the visual mirror store
+  const { showContent } = useVisualMirrorStore()
 
   // Local state for text input
   const [promptText, setPromptText] = useState(data.content || "")
 
-  // Handle text change - use the centralized store for propagation
+  // Handle text change - update local state and use the centralized store for propagation
   const handleTextChange = useCallback(
     (text: string) => {
-      // Update local state
+      // Update local state first
       setPromptText(text)
-      
-      // Update centralized store - this handles propagation to connected nodes
+
+      // Update centralized store (which handles persistent data propagation)
       updateNodeContent(id, text)
+
+      // Also update the visual mirror store for this node
+      showContent(id, { text })
+      
+      // Find connected target nodes and update their visual content
+      const currentEdges = getEdges()
+      const targetNodeIds = currentEdges
+        .filter(edge => edge.source === id)
+        .map(edge => edge.target)
+        
+      // Update visual mirror for each connected target node
+      targetNodeIds.forEach(targetId => {
+        showContent(targetId, { text })
+      })
     },
-    [id, updateNodeContent],
+    [id, updateNodeContent, getEdges, showContent],
   )
 
   // Initialize local state when component mounts or data changes

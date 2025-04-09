@@ -5,16 +5,16 @@ import Image from "next/image"
 import { Upload, ImageOff } from "lucide-react"
 import { createInteractiveProps } from "@/lib/utils/node-interaction"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
-import { memo, useMemo, useRef } from "react"
+import { memo, useMemo } from "react"
 
 interface NodeContentProps {
   data: any
   isSubmitting?: boolean
   isGenerated?: boolean
   showVideo?: boolean
-  imageUrl?: string | null
-  fallbackImageUrl?: string | null
-  textContent?: string
+  sourceImageUrl?: string | null
+  outputImageUrl?: string | null
+  sourceNodeContent?: string | null
   isDragging?: boolean
   dropRef?: React.RefObject<HTMLDivElement>
   handleDragOver?: (e: React.DragEvent<HTMLDivElement>) => void
@@ -25,16 +25,17 @@ interface NodeContentProps {
 }
 
 /**
- * Reusable node content component for displaying images, videos, and text
+ * Simplified node content component focused only on image upload/display
+ * No text handling - that's done directly in BaseNode now
  */
 function NodeContentComponent({
   data,
   isSubmitting = false,
   isGenerated = false,
   showVideo = false,
-  imageUrl,
-  fallbackImageUrl,
-  textContent,
+  sourceImageUrl,
+  outputImageUrl,
+  sourceNodeContent,
   isDragging = false,
   dropRef,
   handleDragOver,
@@ -47,129 +48,92 @@ function NodeContentComponent({
   const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
   const interactiveProps = createInteractiveProps(handleInputInteraction)
 
-  // Cache previous content to avoid unnecessary re-renders
-  const contentRef = useRef<string>("")
-
-  // Get content to display - prioritize sourceNodeContent if available
-  const displayContent = useMemo(() => {
-    const content = textContent || data?.sourceNodeContent || (typeof data?.content === "string" ? data.content : "")
-    if (content !== contentRef.current) {
-      contentRef.current = content
-    }
-    return contentRef.current
-  }, [textContent, data?.sourceNodeContent, data?.content])
-
-  // Determine if this is an image-based node
-  const isImageNode = useMemo(
+  // Determine node types for conditional rendering
+  const isImageUploadNode = useMemo(
     () => data?.category === "image" || data?.category === "image-to-image" || data?.category === "image-to-video",
     [data?.category],
-  )
-
-  // Determine if this node requires an image input
-  const requiresImageInput = useMemo(
-    () => data?.category === "image-to-image" || data?.category === "image-to-video",
-    [data?.category],
-  )
-
-  // Determine if this is a video-based node
-  const isVideoNode = useMemo(
+  );
+  const isVideoOutputNode = useMemo(
     () => data?.category === "image-to-video" || data?.category === "text-to-video",
     [data?.category],
-  )
+  );
+
+  // Determine if we have source preview data
+  const hasSourcePreviewData = !!sourceNodeContent || !!sourceImageUrl;
+
+  // *** Centralized Display Logic v2 ***
+  const renderContent = () => {
+    if (isSubmitting) {
+      return <div className="text-[9px] text-gray-400 p-2 text-center">Generating...</div>;
+    }
+    if (isGenerated) {
+      if (isVideoOutputNode) {
+        return <Image src={outputImageUrl || "/akira-animation.gif"} alt="Generated video" layout="fill" objectFit="cover" />;
+      } else {
+        return <img src={outputImageUrl || "/sample-image.png"} alt="Generated content" className="object-cover w-full h-full" />;
+      }
+    }
+    if (sourceImageUrl) {
+      return <img src={sourceImageUrl} alt="Source Preview" className="object-contain w-full h-auto max-h-[140px]" />;
+    }
+    if (sourceNodeContent) {
+      console.log(`[NodeContent DEBUG ${data?.id}] Rendering: Source Text Preview (Simplified)`);
+      // Removed non-standard JSX and made sure the div is visible with stronger styling
+      return (
+        <div className="block w-full p-2 text-green-500 text-xs font-mono break-words text-center bg-black/30 border border-green-900/30">
+          {sourceNodeContent}
+        </div>
+      );
+    }
+    if (isImageUploadNode) {
+      if (outputImageUrl) {
+         return <img src={outputImageUrl} alt="Node Image" className="object-cover w-full h-full" />;
+      } else {
+         return (
+           <div 
+             ref={dropRef} 
+             onDragOver={handleDragOver} 
+             onDragLeave={handleDragLeave} 
+             onDrop={handleDrop} 
+             onClick={handleClick} 
+             className={`w-full h-full flex flex-col items-center justify-center gap-1 p-2 ${isDragging ? "bg-gray-800/50 border-2 border-dashed border-yellow-300/50" : ""} ${handleClick ? "cursor-pointer" : ""}`}
+            >
+             <Upload className="h-4 w-4 text-gray-500" />
+             <div className="text-[9px] text-gray-400 text-center">
+               {handleClick ? "Click to select or drag image" : "Connect image node"} 
+             </div>
+           </div>
+         );
+      }
+    } else {
+      return (
+        <div className="text-[9px] text-gray-400 text-center p-2">
+           {isVideoOutputNode ? "Video input needed" : "Text input needed"}
+        </div>
+      );
+    }
+  };
 
   return (
     <div className="space-y-1.5 node-content-container">
       <div
-        className="relative bg-black rounded-sm overflow-hidden transition-all duration-300 ease-in-out"
+        className="relative bg-black/30 rounded-sm overflow-hidden transition-all duration-300 ease-in-out flex items-center justify-center"
         style={{
           aspectRatio: "16/9",
-          maxHeight: isGenerated || isSubmitting ? "150px" : "auto",
+          minHeight: "80px", // Ensure minimum height
         }}
       >
-        {isSubmitting ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-[9px] text-gray-400 p-2 text-center">Generating {data?.category || "content"}...</div>
-          </div>
-        ) : isGenerated ? (
-          // Show generated content based on node type
-          <>
-            {showVideo && isVideoNode ? (
-              <div className="w-full h-full flex items-center justify-center">
-                <Image
-                  src="/akira-animation.gif"
-                  alt="Generated video"
-                  width={260}
-                  height={150}
-                  className="object-cover w-full h-full"
-                />
-              </div>
-            ) : (
-              <img
-                src={imageUrl || data?.imageUrl || "/sample-image.png"}
-                alt="Generated content"
-                className="object-cover w-full h-full"
-              />
-            )}
-          </>
-        ) : (
-          // Show placeholder or upload area based on node type
-          <>
-            {isImageNode ? (
-              // For image-based nodes, show image upload area or connected image
-              <div
-                ref={dropRef}
-                className={`w-full h-full flex items-center justify-center ${
-                  isDragging ? "bg-gray-800/50 border-2 border-dashed border-yellow-300/50" : ""
-                } ${handleClick ? "cursor-pointer" : ""}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={handleClick}
-              >
-                {/* Show connected image first, then fallback, then placeholder */}
-                {imageUrl ? (
-                  <img src={imageUrl} alt="Source image" className="object-cover w-full h-full" />
-                ) : fallbackImageUrl ? (
-                  <img src={fallbackImageUrl} alt="Fallback source image" className="object-cover w-full h-full" />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-2">
-                    {handleClick ? (
-                      <>
-                        <Upload className="h-4 w-4 text-gray-500" />
-                        <div className="text-[9px] text-gray-400 text-center">
-                          Click to select from library or drag and drop
-                        </div>
-                      </>
-                    ) : requiresImageInput ? (
-                      <>
-                        <ImageOff className="h-4 w-4 text-gray-500" />
-                        <div className="text-[9px] text-gray-400 text-center">Connect image node</div>
-                      </>
-                    ) : (
-                      <div className="text-[9px] text-gray-400 text-center">Image will appear here</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              // For text-based nodes, show empty area or text preview
-              <div className="w-full h-full flex items-center justify-center bg-black/30 p-2">
-                <div className="text-[9px] text-gray-400 text-center">
-                  {isVideoNode ? "Video will appear here" : "Image will appear here"}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+        {renderContent()} {/* Render the determined content */} 
 
-        {/* Caption display at the bottom */}
+        {/* Caption (Rendered regardless of state) */} 
         {data?.caption && (
-          <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/70 text-yellow-300 text-[9px] font-mono tracking-wide">
-            {data.caption}
-          </div>
-        )}
+           <div className="absolute bottom-0 left-0 right-0 p-1 bg-black/70 text-yellow-300 text-[9px] font-mono tracking-wide">
+             {data.caption}
+           </div>
+         )}
       </div>
 
+      {/* Children are rendered outside the main content area */} 
       {children}
     </div>
   )
@@ -177,13 +141,21 @@ function NodeContentComponent({
 
 // Simple memoization to prevent unnecessary re-renders
 export const NodeContent = memo(NodeContentComponent, (prevProps, nextProps) => {
-  // Compare only the props that affect rendering
+  // Added debugging logs to trace the memoization
+  if (prevProps.sourceNodeContent !== nextProps.sourceNodeContent) {
+    console.log(`[NodeContent Memo] Re-rendering due to sourceNodeContent change: 
+      prev: "${prevProps.sourceNodeContent?.substring(0, 20)}", 
+      next: "${nextProps.sourceNodeContent?.substring(0, 20)}"`);
+    return false; // Different, should re-render
+  }
+
   return (
     prevProps.isSubmitting === nextProps.isSubmitting &&
     prevProps.isGenerated === nextProps.isGenerated &&
     prevProps.showVideo === nextProps.showVideo &&
-    prevProps.imageUrl === nextProps.imageUrl &&
-    prevProps.fallbackImageUrl === nextProps.fallbackImageUrl &&
+    prevProps.outputImageUrl === nextProps.outputImageUrl &&
+    prevProps.sourceImageUrl === nextProps.sourceImageUrl &&
+    prevProps.sourceNodeContent === nextProps.sourceNodeContent &&
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.data?.category === nextProps.data?.category &&
     prevProps.data?.caption === nextProps.data?.caption

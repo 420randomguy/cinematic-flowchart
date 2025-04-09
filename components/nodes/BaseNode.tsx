@@ -12,8 +12,6 @@ import { NodeSettings } from "@/components/ui/node-settings"
 import { NodeActions } from "@/components/ui/NodeActions"
 import { SourceHandle, TargetHandle } from "@/components/shared/NodeHandles"
 import { useNodeEvents } from "@/hooks/useNodeEvents"
-import { TextPreview } from "@/components/ui/text-preview"
-import ImagePreview from "@/components/ui/image-preview"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 
 // Simple DOM read function to replace the deleted utility
@@ -117,8 +115,13 @@ function BaseNodeComponent({
     }
   }
 
-  // Extract properties from contentProps for SubmitButton and NodeContent
-  const { isSubmitting, isGenerated, timeRemaining, handleSubmitToggle, ...restContentProps } = contentProps
+  // Extract ONLY props needed DIRECTLY by BaseNode
+  const { 
+    isSubmitting,
+    isGenerated,
+    timeRemaining,
+    handleSubmitToggle,
+  } = contentProps
 
   // Determine if this is an output node (nodes that process inputs)
   const isOutputNode = useMemo(() => {
@@ -175,8 +178,22 @@ function BaseNodeComponent({
   // Determine text content for preview from props or data
   const previewTextContent = contentProps.textContent ?? (data.sourceNodeContent || "");
 
-  // Determine if there's preview content (connected image or connected text) to show
-  const hasPreviewContent = !!data.sourceImageUrl || isTextNodeConnected; // Show preview container if either image OR text is connected
+  // Determine if there's preview content (connected/propagated image or text) to show
+  const hasSourceContent = !!data.sourceNodeContent;
+  const hasSourceImage = !!data.sourceImageUrl;
+
+  // Explicitly log the content being used
+  useEffect(() => {
+    if (isOutputNode) {
+      console.log(`[BaseNode ${id}] sourceNodeContent:`, data.sourceNodeContent);
+      console.log(`[BaseNode ${id}] contentProps.textContent:`, contentProps.textContent);
+      console.log(`[BaseNode ${id}] isTextNodeConnected:`, isTextNodeConnected);
+      console.log(`[BaseNode ${id}] hasPreviewContent:`, hasSourceContent, hasSourceImage);
+    }
+  }, [id, isOutputNode, data.sourceNodeContent, contentProps.textContent, isTextNodeConnected, hasSourceContent, hasSourceImage]);
+
+  // Add a reactive check for text content presence
+  const hasTextContent = !!data.sourceNodeContent && data.sourceNodeContent.trim().length > 0;
 
   // Optimized function to set up DOM references
   const setupDOMReferences = useCallback(() => {
@@ -277,29 +294,21 @@ function BaseNodeComponent({
         </div>
       )}
 
-      {/* Preview Area - Render only if output node and has connected content */}
-      {isOutputNode && hasPreviewContent && (
-        <div className="px-1.5 pb-1 space-y-1">
-          {/* Image Preview - Use data.sourceImageUrl */} 
-          {data.sourceImageUrl && <ImagePreview imageUrl={data.sourceImageUrl} />}  
-          
-          {/* Text Preview - Only show if text node is connected */}
-          {isTextNodeConnected && (
-            <TextPreview
-              text={data.sourceNodeContent || ""} // Directly use propagated content
-              isConnected={true} // Already checked isTextNodeConnected
-              showIfEmpty={true} // Show even if previewTextContent is empty initially
-              emptyText="Text node connected" // Update placeholder
-              maxLength={30} // Optional: Adjust length
-              // Add top border only if image preview is also shown above it
-              className={`${data.sourceImageUrl ? 'border-t border-gray-800/30 pt-1' : ''}`}
-            />
-          )}
-        </div>
-      )}
+      {/* NodeContent - Pass ONLY necessary props explicitly */}
+      <NodeContent
+        data={data}
+        isSubmitting={isSubmitting}
+        isGenerated={isGenerated}
+        sourceNodeContent={data.sourceNodeContent}
+        sourceImageUrl={data.sourceImageUrl}
+        outputImageUrl={data.imageUrl}
+      />
 
-      {/* Dynamic Node Content Area (e.g., image output) */}
-      <NodeContent data={data} {...restContentProps} isSubmitting={isSubmitting} isGenerated={isGenerated} />
+      {/* Debug output - temporary for troubleshooting */}
+      {data.sourceNodeContent && (() => {
+        console.log(`[BaseNode:DEBUG] ${id} Passed sourceNodeContent to NodeContent: "${data.sourceNodeContent.substring(0, 30)}..."`)
+        return null;
+      })()}
 
       {/* Children (e.g., specific inputs/settings for derived nodes) */}
       {children}
@@ -333,31 +342,7 @@ function BaseNodeComponent({
   )
 }
 
-// Optimized comparison function for BaseNode
-export const BaseNode = memo(BaseNodeComponent, (prevProps, nextProps) => {
-  // Fast path: reference equality
-  if (prevProps === nextProps) return true
+// Export component directly
+export const BaseNode = BaseNodeComponent;
 
-  // Compare only the props that affect rendering
-  return (
-    prevProps.id === nextProps.id &&
-    prevProps.nodeType === nextProps.nodeType &&
-    prevProps.title === nextProps.title &&
-    prevProps.showSourceHandle === nextProps.showSourceHandle &&
-    prevProps.showTargetHandle === nextProps.showTargetHandle &&
-    prevProps.isConnectable === nextProps.isConnectable &&
-    prevProps.modelId === nextProps.modelId &&
-    prevProps.data.title === nextProps.data.title &&
-    prevProps.data.showImage === nextProps.data.showImage &&
-    prevProps.data.isNewNode === nextProps.data.isNewNode &&
-    // Only compare content props that affect rendering
-    prevProps.contentProps?.isSubmitting === nextProps.contentProps?.isSubmitting &&
-    prevProps.contentProps?.isGenerated === nextProps.contentProps?.isGenerated &&
-    prevProps.contentProps?.showVideo === nextProps.contentProps?.showVideo &&
-    prevProps.contentProps?.imageUrl === nextProps.contentProps?.imageUrl &&
-    // Compare propagated data for previews
-    prevProps.data?.sourceImageUrl === nextProps.data?.sourceImageUrl &&
-    prevProps.data?.sourceNodeContent === nextProps.data?.sourceNodeContent
-  )
-})
 

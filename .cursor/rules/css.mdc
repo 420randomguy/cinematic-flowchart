@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Style and CSS
+
+- Use Tailwind CSS consistenly
+- Do not put any styling outside of CSS tailwind files

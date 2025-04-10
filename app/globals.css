@@ -27,6 +27,9 @@
   --connection-text: 142, 70%, 50%; /* Green for text connections */
   --connection-image: 210, 100%, 50%; /* Blue for image connections */
   --connection-lora: 280, 100%, 50%; /* Purple for lora connections */
+  
+  /* Sidebar width for mobile devices */
+  --sidebar-width-mobile: 300px;
 }
 
 body {
@@ -461,16 +464,58 @@ Optimize rendering performance
 /* Selected node styling */
 .node-selected {
   z-index: 10;
+  position: relative;
+  box-shadow: 0 0 200px rgba(100, 100, 100, 0.06); /* Much wider glow effect */
 }
 
-/* Gradient for all nodes */
+/* Border shimmer animation for selected nodes */
+.node-selected::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background: linear-gradient(
+    45deg,
+    transparent 0%,
+    rgba(180, 180, 180, 0) 10%,
+    rgba(180, 180, 180, 0.15) 20%, /* Increased contrast */
+    rgba(180, 180, 180, 0) 30%,
+    transparent 40%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 3s infinite linear; /* Faster animation */
+  mask: 
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: source-out;
+  padding: 1px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Gradient for all nodes - This must always apply regardless of selection */
 .node-gradient {
-  background: linear-gradient(165deg, #000 40%, rgba(80, 80, 80, 0.15) 100%);
+  background: linear-gradient(165deg, #000 40%, rgba(80, 80, 80, 0.15) 100%) !important;
 }
 
-/* Base gradient for all nodes - subtle brightness from bottom */
-.node-base-gradient {
-  background: linear-gradient(to bottom, transparent 80%, rgba(80, 80, 80, 0.2) 100%);
-  z-index: -2;
+/* User profile dropdown styling */
+.user-profile-dropdown {
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.5));
 }
 

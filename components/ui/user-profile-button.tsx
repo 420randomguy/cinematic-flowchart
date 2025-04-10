@@ -58,10 +58,7 @@ export default function UserProfileButton() {
 
       {isOpen && (
         <div
-          className="absolute top-14 right-4 z-50 bg-black border border-gray-800/50 rounded-sm p-4 shadow-lg w-72 font-mono text-white"
-          style={{
-            filter: "drop-shadow(0 0 8px rgba(0, 0, 0, 0.5))",
-          }}
+          className="absolute top-14 right-4 z-50 bg-black border border-gray-800/50 rounded-sm p-4 shadow-lg w-72 font-mono text-white user-profile-dropdown"
         >
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-medium">{isLoggedIn ? "API Settings" : "Login"}</h3>

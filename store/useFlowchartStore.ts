@@ -403,6 +403,12 @@ export const useFlowchartStore = create<FlowchartState>()(
                     const sourceNode = updatedNodes.find(n => n.id === removedEdge.source);
                     const targetNode = updatedNodes[targetNodeIndex];
                     
+                    // Explicit import of useVisualMirrorStore to clear content
+                    const { clearContent } = require('@/store/useVisualMirrorStore').useVisualMirrorStore.getState();
+                    
+                    // Clear content from VisualMirrorStore for the target node
+                    clearContent(removedEdge.target);
+                    
                     const { targetNode: updatedTargetNode, didUpdate } = get().clearNodeData(
                       targetNode, 
                       sourceNode?.type, 

@@ -1,16 +1,17 @@
 "use client"
 
-import { memo, useState, useCallback } from "react"
+import { memo, useState, useCallback, useEffect } from "react"
 import type { NodeProps } from "reactflow"
 import type { VideoNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { useNodeState } from "@/hooks/useNodeState"
 import { VisualMirrorText, VisualMirrorImage } from "@/components/nodes/VisualMirror"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
-import { useVisualMirrorUpdate } from "@/hooks/useVisualMirrorUpdate"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
   const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
+  const { showContent, clearContent } = useVisualMirrorStore()
 
   // Use the node state hook for managing state
   const {
@@ -31,11 +32,23 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
     initialModelId: "wan-pro",
   })
 
-  // Use the visual mirror update hook to sync node data with the store
-  useVisualMirrorUpdate(id, data, isSubmitting)
-
   // Determine the text content to display directly from props.data
   const textToDisplay = data.sourceNodeContent || data.content || ""
+  
+  // Set or update visual mirror content
+  useEffect(() => {
+    if (textToDisplay) {
+      showContent(id, { text: textToDisplay })
+    }
+    
+    if (data.videoUrl) {
+      showContent(id, { imageUrl: data.videoUrl })
+    }
+    
+    return () => {
+      clearContent(id)
+    }
+  }, [id, textToDisplay, data.videoUrl, showContent, clearContent])
   
   // This node outputs a video
   const outputVideoUrl = data.videoUrl || "/akira-animation.gif" // Use a placeholder video if none available

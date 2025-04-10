@@ -674,7 +674,7 @@ function FlowchartCanvasInner() {
             deleteKeyCode="Delete"
             connectionLineType={ConnectionLineType.SmoothStep}
             connectionLineStyle={{ stroke: "#444", strokeWidth: 1 }}
-            selectNodesOnDrag={true}
+            selectNodesOnDrag={false}
             nodeDragThreshold={5}
             selectionMode={SelectionMode.Partial}
             zoomOnDoubleClick={false}

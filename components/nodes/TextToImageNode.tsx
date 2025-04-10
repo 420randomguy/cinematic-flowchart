@@ -1,13 +1,13 @@
 "use client"
 
-import { memo, useState, useCallback } from "react"
+import { memo, useState, useCallback, useEffect } from "react"
 import type { NodeProps } from "reactflow"
 import type { ImageNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { useNodeState } from "@/hooks/useNodeState"
 import { VisualMirrorImage, VisualMirrorText } from "@/components/nodes/VisualMirror"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
-import { useVisualMirrorUpdate } from "@/hooks/useVisualMirrorUpdate"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // REMOVED event detail structure
 // interface FlowchartContentUpdateDetail { ... }
@@ -15,6 +15,7 @@ import { useVisualMirrorUpdate } from "@/hooks/useVisualMirrorUpdate"
 
 function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
+  const { showContent, clearContent } = useVisualMirrorStore()
   
   // Use the node state hook for managing state
   const {
@@ -32,32 +33,30 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
   } = useNodeState({
     id,
     data,
-    initialModelId: "flux-dev",
+    initialModelId: "stable-diffusion-xl",
   })
   
-  // Use the visual mirror update hook to sync node data with the store
-  useVisualMirrorUpdate(id, data, isSubmitting)
-  
-  // Get connected node content directly from props (updated by store)
-  // const { textContent: connectedTextContentViaHook } = useNodeConnections({ id })
-  
-  // REMOVED Initialization effect
-  // useEffect(() => { ... }, [...])
-
-  // REMOVED Effect for handling real-time updates via events
-  // useEffect(() => { ... }, [id])
-
-  // Determine the text content to display directly from props.data
+  // Determine the text content to display
   const textToDisplay = data.sourceNodeContent || data.content || ""
   
-  // This node *outputs* an image, stored in data.imageUrl
-  const outputImageUrl = data.imageUrl
+  // Set or update visual mirror content
+  useEffect(() => {
+    if (textToDisplay) {
+      showContent(id, { text: textToDisplay })
+    }
+    
+    if (data.imageUrl) {
+      showContent(id, { imageUrl: data.imageUrl })
+    }
+    
+    return () => {
+      clearContent(id)
+    }
+  }, [id, textToDisplay, data.imageUrl, showContent, clearContent])
   
-  // Update data object with output image URL when generated
-  if (isGenerated && outputImageUrl && !isSubmitting) {
-    data.imageUrl = outputImageUrl;
-  }
-
+  // The output image URL
+  const outputImageUrl = data.imageUrl || null
+  
   // Optional source image URL, used for potential connections
   const sourceImageUrlToDisplay = data.sourceImageUrl || null
 

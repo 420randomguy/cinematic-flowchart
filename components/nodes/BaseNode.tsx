@@ -316,10 +316,7 @@ function BaseNodeComponent({
           {/* Use VisualMirrorImage for displaying images */}
           {(data.showImage || hasSourceImage || data.imageUrl) && (
             <div className={`relative ${isSubmitting ? 'opacity-50' : ''}`}>
-              <VisualMirrorImage 
-                nodeId={id} 
-                hidePrompt={nodeType === "text-to-image" || nodeType === "text-to-video"}
-              />
+              <VisualMirrorImage nodeId={id} />
             </div>
           )}
           

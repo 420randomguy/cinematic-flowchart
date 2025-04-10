@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState, useCallback, useEffect, useMemo } from "react"
+import { memo, useState, useCallback, useEffect } from "react"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
 import { InputSection } from "@/components/nodes/sections/InputSection"
@@ -60,7 +60,7 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
 
   // Initialize local state when component mounts or data changes
   useEffect(() => {
-    if (data.content && data.content !== promptText) {
+    if (data.content !== undefined && data.content !== promptText) {
       setPromptText(data.content)
     }
   }, [data.content, promptText])

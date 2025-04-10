@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useEffect, useMemo, useCallback, useState } from "react"
+import { memo, useEffect, useMemo, useCallback, useState, useRef } from "react"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { useNodeState } from "@/hooks/useNodeState"
 import { useImageHandling } from "@/hooks/useImageHandling"
@@ -10,15 +10,27 @@ import type { NodeProps } from "reactflow"
 import type { ImageToImageNodeData } from "@/types/node-types"
 import { useReactFlow } from "reactflow"
 import { VisualMirrorImage, VisualMirrorText } from "@/components/nodes/VisualMirror"
-import { useVisualMirrorUpdate } from "@/hooks/useVisualMirrorUpdate"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // Create stable selector outside of the component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
+const getNodeSelector = (state: any) => state.getNode
 
 function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNodeData>) {
   // Use the store with stable selector
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  const getNode = useFlowchartStore(getNodeSelector)
+  const { showContent, clearContent } = useVisualMirrorStore()
   
+  // Reference for drag-and-drop
+  const dropRef = useRef<HTMLDivElement>(null)
+  
+  // State for dialog
+  const [showImageSelector, setShowImageSelector] = useState(false)
+  const [savedImages, setSavedImages] = useState([]) // Default to empty array
+  const [isDragging, setIsDragging] = useState(false)
+
+  // Create handler for input interaction
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
       setIsInteractingWithInput(isInteracting);
@@ -31,8 +43,6 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     quality,
     setQuality,
     seed,
-    strength,
-    setStrength,
     isSubmitting,
     isGenerated,
     timeRemaining,
@@ -44,73 +54,67 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
   } = useNodeState({
     id,
     data,
-    initialModelId: "flux-dev",
+    initialModelId: "stable-diffusion-xl",
   })
 
-  // Use the visual mirror update hook to sync node data with the store
-  useVisualMirrorUpdate(id, data, isSubmitting)
-
-  // Use the image handling hook
+  // Use image handling hooks
   const {
-    isDragging,
-    showImageSelector,
-    setShowImageSelector,
-    dropRef,
-    savedImages,
     handleDragOver,
     handleDragLeave,
     handleDrop,
     handleClick,
-    selectImage,
     handleFileUpload,
+    selectImage,
   } = useImageHandling({
     id,
     data,
-    handleInputInteraction,
+    handleInputInteraction
   })
 
-  // Determine the image URL to *display* as the source, directly from props.data
+  // Determine the text content to display directly from props.data
+  const textToDisplay = data.sourceNodeContent || data.content || ""
+
+  // Determine if we have a source image to use
   const sourceImageUrlToDisplay = data.sourceImageUrl || data.imageUrl || null
   
-  // Determine the text content to display directly from props.data
-  const textContentToDisplay = data.sourceNodeContent || data.content || ""
-  
-  // This node *outputs* an image, stored in data.outputImageUrl or data.imageUrl
-  const outputImageUrl = data.outputImageUrl || data.imageUrl // Check type definition
+  // Set or update visual mirror content
+  useEffect(() => {
+    if (textToDisplay) {
+      showContent(id, { text: textToDisplay })
+    }
+    
+    if (sourceImageUrlToDisplay) {
+      showContent(id, { imageUrl: sourceImageUrlToDisplay })
+    }
+    
+    return () => {
+      clearContent(id)
+    }
+  }, [id, textToDisplay, sourceImageUrlToDisplay, showContent, clearContent])
 
-  // Update data object with output image URL when generated
-  if (isGenerated && outputImageUrl && !isSubmitting) {
-    data.imageUrl = outputImageUrl;
-  }
-
-  // Define target handles
-  const targetHandleIds = useMemo(() => ["image", "text", "lora"], [])
+  // The output image URL when generated
+  const outputImageUrl = data.imageUrl || null
 
   // Check if input requirements are met
-  const hasConnectedText = !!textContentToDisplay;
-  const hasConnectedSourceImage = !!sourceImageUrlToDisplay;
-  
-  // Update submit button disabled state based on connections
-  const isSubmitDisabled = !hasConnectedText || !hasConnectedSourceImage;
+  const hasValidImage = !!sourceImageUrlToDisplay;
+  const isSubmitDisabled = !hasValidImage;
 
   return (
     <>
-      <div className="relative">
+      <div className="relative" onMouseDown={() => setIsInteractingWithInput(false)}>
         <BaseNode
           id={id}
           data={{
             ...data,
-            // Pass the store-managed source data down
+            content: textToDisplay,
             sourceImageUrl: sourceImageUrlToDisplay,
-            sourceNodeContent: textContentToDisplay,
-            // Pass the output image URL
-            imageUrl: outputImageUrl, // Ensure this is the OUTPUT image property
+            showImage: true,
           }}
           nodeType="image-to-image"
           title={data.title || "IMAGE-TO-IMAGE"}
-          showSourceHandle={true} // Image nodes usually have an image output
+          showSourceHandle={true}
           showTargetHandle={true}
-          targetHandleIds={targetHandleIds}
+          targetHandleIds={["text", "image"]}
           isConnectable={isConnectable}
           modelId={selectedModelId}
           onModelChange={handleModelChange}
@@ -119,8 +123,8 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
             isGenerated,
             timeRemaining,
             handleSubmitToggle,
-            category: "image-to-image",
             disabled: isSubmitDisabled,
+            category: "image-to-image",
             handleDragOver,
             handleDragLeave,
             handleDrop,
@@ -132,14 +136,11 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
             quality,
             setQuality,
             seed,
-            strength,
-            setStrength,
             selectedModelId,
             modelSettings,
             handleSettingsChange,
           }}
         >
-          {/* Add VisualMirrorImage inside BaseNode within NodeContent */}
           {isSubmitting ? (
             <div className="text-[9px] text-gray-400 p-2 text-center">Generating...</div>
           ) : (

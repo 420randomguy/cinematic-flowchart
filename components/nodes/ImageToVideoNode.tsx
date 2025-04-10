@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState, useCallback } from "react"
+import { memo, useState, useCallback, useEffect, useRef } from "react"
 import type { NodeProps } from "reactflow"
 import type { VideoNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
@@ -8,13 +8,30 @@ import { useNodeState } from "@/hooks/useNodeState"
 import { useImageHandling } from "@/hooks/useImageHandling"
 import { VisualMirrorImage, VisualMirrorText } from "@/components/nodes/VisualMirror"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
-import { useVisualMirrorUpdate } from "@/hooks/useVisualMirrorUpdate"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // Create stable selector outside component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
 
 function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
-  const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
+  const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  const { showContent, clearContent } = useVisualMirrorStore()
+  
+  // Reference for drag-and-drop
+  const dropRef = useRef<HTMLDivElement>(null)
+  
+  // Local state for image handling
+  const [isDragging, setIsDragging] = useState(false)
+  const [showImageSelector, setShowImageSelector] = useState(false)
+  const [savedImages] = useState([]) // Default to empty array since VideoNodeData doesn't have savedImages
+
+  // Create handler for input interaction
+  const handleInputInteraction = useCallback(
+    (isInteracting = false) => {
+      setIsInteractingWithInput(isInteracting);
+    },
+    [setIsInteractingWithInput]
+  );
 
   // Use the node state hook for managing state
   const {
@@ -35,31 +52,47 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
     initialModelId: "wan-pro",
   })
 
-  // Use the visual mirror update hook to sync node data with the store
-  useVisualMirrorUpdate(id, data, isSubmitting)
-
-  // Use the image handling hook
+  // Use our consolidated image handling hook
   const {
-    isDragging,
-    dropRef,
     handleDragOver,
     handleDragLeave,
     handleDrop,
     handleClick,
+    handleFileUpload,
+    selectImage,
   } = useImageHandling({
     id,
     data,
-    handleInputInteraction: (isInteracting) => setIsInteractingWithInput(isInteracting),
+    handleInputInteraction,
   })
 
-  // Determine the text content to display directly from props.data
+  // Determine text-based content to display (if connected to a text node)
   const textToDisplay = data.sourceNodeContent || data.content || ""
-  
-  // Determine the image URL to display as the source
+
+  // Determine image-based source to display (if uploaded or connected)
   const sourceImageUrlToDisplay = data.sourceImageUrl || data.imageUrl || null
   
+  // Set or update visual mirror content
+  useEffect(() => {
+    if (textToDisplay) {
+      showContent(id, { text: textToDisplay })
+    }
+    
+    if (sourceImageUrlToDisplay) {
+      showContent(id, { imageUrl: sourceImageUrlToDisplay })
+    }
+    
+    if (data.videoUrl) {
+      showContent(id, { imageUrl: data.videoUrl })
+    }
+    
+    return () => {
+      clearContent(id)
+    }
+  }, [id, textToDisplay, sourceImageUrlToDisplay, data.videoUrl, showContent, clearContent])
+
   // This node outputs a video
-  const outputVideoUrl = data.videoUrl || "/akira-animation.gif" // Use a placeholder video if none available
+  const outputVideoUrl = data.videoUrl || "/akira-animation.gif" // Use a placeholder if none available
 
   // Update data object with video URL when generated
   if (isGenerated && !isSubmitting) {
@@ -67,11 +100,8 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
   }
 
   // Check if input requirements are met
-  const hasValidText = !!textToDisplay;
-  const hasValidImages = !!sourceImageUrlToDisplay;
-  
-  // Update submit button disabled state based on connections
-  const isSubmitDisabled = !hasValidText || !hasValidImages;
+  const hasValidImage = !!sourceImageUrlToDisplay;
+  const isSubmitDisabled = !hasValidImage;
 
   return (
     <div className="relative" onMouseDown={() => setIsInteractingWithInput(false)}>
@@ -79,7 +109,7 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
         id={id}
         data={{
           ...data,
-          sourceNodeContent: textToDisplay,
+          content: textToDisplay,
           sourceImageUrl: sourceImageUrlToDisplay,
           showImage: true,
         }}

@@ -7,20 +7,14 @@ import { Upload } from "lucide-react"
 interface VisualMirrorProps {
   nodeId: string
   type?: "image" | "text" | "both" // Type prop to control what content to show
-  textLimit?: number // Optional limit for text characters
   hidePrompt?: boolean // New prop to optionally hide the empty state prompt
 }
 
 // Core VisualMirror component for different content types
-function VisualMirrorComponent({ nodeId, type = "both", textLimit, hidePrompt = false }: VisualMirrorProps) {
+function VisualMirrorComponent({ nodeId, type = "both", hidePrompt = false }: VisualMirrorProps) {
   // Get content from the visual mirror store
   const { visibleContent } = useVisualMirrorStore()
   const visualData = visibleContent[nodeId] || {}
-  
-  // If text limit is provided, apply it
-  const displayText = textLimit && visualData.text 
-    ? visualData.text.substring(0, textLimit) 
-    : visualData.text
 
   // Image-only rendering
   if (type === "image") {
@@ -40,18 +34,15 @@ function VisualMirrorComponent({ nodeId, type = "both", textLimit, hidePrompt = 
     );
   }
   
-  // Text-only rendering
+  // Text-only rendering - only render if text exists
   if (type === "text") {
+    if (!visualData || !visualData.text) {
+      return null;
+    }
+    
     return (
-      <div className="block w-full p-2 relative text-[9px] font-mono text-left bg-black/30 border border-yellow-900/30 overflow-hidden">
-        {visualData.text ? (
-          <div className="text-yellow-300 whitespace-nowrap overflow-hidden">
-            {displayText}
-            <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-r from-transparent to-black/30 pointer-events-none"></div>
-          </div>
-        ) : (
-          <div className="text-gray-500">Prompt text...</div>
-        )}
+      <div className="block w-full p-2 text-yellow-300 text-[9px] font-mono break-words text-left bg-black/30">
+        {visualData.text}
       </div>
     );
   }
@@ -59,20 +50,13 @@ function VisualMirrorComponent({ nodeId, type = "both", textLimit, hidePrompt = 
   // Combined rendering for "both" type
   return (
     <div className="visual-mirror pointer-events-none w-full h-full">
-      {/* Text section */}
-      <div className="block w-full p-2 relative text-[9px] font-mono text-left bg-black/30 border border-yellow-900/30 overflow-hidden">
-        {visualData.text ? (
-          <div className="text-yellow-300 whitespace-nowrap overflow-hidden">
-            {displayText}
-            <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-r from-transparent to-black/30 pointer-events-none"></div>
-          </div>
-        ) : (
-          <div className="text-gray-500">Prompt text...</div>
-        )}
-      </div>
+      {visualData && visualData.text && (
+        <div className="block w-full p-2 text-yellow-300 text-[9px] font-mono break-words text-left bg-black/30">
+          {visualData.text}
+        </div>
+      )}
       
-      {/* Image section */}
-      {visualData.imageUrl ? (
+      {visualData && visualData.imageUrl ? (
         <div className="w-full h-full overflow-hidden">
           <img 
             src={visualData.imageUrl} 
@@ -99,17 +83,11 @@ export const VisualMirrorImage = memo(({ nodeId, hidePrompt = false }: { nodeId:
 VisualMirrorImage.displayName = "VisualMirrorImage"
 
 // Text-only variant - for displaying the 25 char preview
-export const VisualMirrorText = memo(({ nodeId }: { nodeId: string }) => {
-  return (
-    <div className="px-2 pb-2 node-text-preview">
-      <VisualMirrorComponent 
-        nodeId={nodeId} 
-        type="text"
-        textLimit={25}
-      />
-    </div>
-  )
-})
+export const VisualMirrorText = memo(({ nodeId }: { nodeId: string }) => (
+  <div className="px-2 pb-2 node-text-preview">
+    <VisualMirrorComponent nodeId={nodeId} type="text" />
+  </div>
+))
 VisualMirrorText.displayName = "VisualMirrorText"
 
 // Render node variant - for displaying generation progress and results

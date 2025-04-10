@@ -119,16 +119,8 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
     }
   }, [id, textToDisplay, sourceImageUrlToDisplay, showContent, clearContent])
 
-  // Log the final text being used for rendering this cycle
-  console.log(`[TextToImageNode:RENDER] ${id} Rendering with text: "${textToDisplay}" (from props.data)`)
-
   // Determine if we have text input from any source for potential logic/display changes
   const hasConnectedText = !!textToDisplay
-
-  // Added extra debug logging
-  if (textToDisplay) {
-    console.log(`[TextToImageNode:DEBUG] ${id} Passing sourceNodeContent: "${textToDisplay.substring(0, 30)}..."`)
-  }
 
   return (
     <>

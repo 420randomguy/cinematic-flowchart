@@ -319,12 +319,6 @@ function BaseNodeComponent({
         isDragging={contentProps.isDragging}
       />
 
-      {/* Debug output - temporary for troubleshooting */}
-      {data.sourceNodeContent && (() => {
-        console.log(`[BaseNode:DEBUG] ${id} Passed sourceNodeContent to NodeContent: "${data.sourceNodeContent.substring(0, 30)}..."`)
-        return null;
-      })()}
-
       {/* Children (e.g., specific inputs/settings for derived nodes) */}
       {children}
 

@@ -458,3 +458,19 @@ Optimize rendering performance
   cursor: pointer;
 }
 
+/* Selected node styling */
+.node-selected {
+  z-index: 10;
+}
+
+/* Gradient for all nodes */
+.node-gradient {
+  background: linear-gradient(165deg, #000 40%, rgba(80, 80, 80, 0.15) 100%);
+}
+
+/* Base gradient for all nodes - subtle brightness from bottom */
+.node-base-gradient {
+  background: linear-gradient(to bottom, transparent 80%, rgba(80, 80, 80, 0.2) 100%);
+  z-index: -2;
+}
+

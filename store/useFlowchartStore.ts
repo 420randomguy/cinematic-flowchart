@@ -366,21 +366,11 @@ export const useFlowchartStore = create<FlowchartState>()(
               if (node.selected) {
                 // Update selectedNodeId state
                 set({ selectedNodeId: node.id })
-                // Add a subtle glow to the selected node
-                return {
-                  ...node,
-                  style: {
-                    ...node.style,
-                    filter: "drop-shadow(0 0 8px rgba(255, 255, 255, 0.2))",
-                  },
-                }
+                // Return node without changing style - we handle this with CSS now
+                return node
               } else {
-                // Remove any glow from unselected nodes
-                const { filter, ...restStyle } = node.style || {}
-                return {
-                  ...node,
-                  style: restStyle,
-                }
+                // No style changes needed for unselected nodes
+                return node
               }
             }),
           }))

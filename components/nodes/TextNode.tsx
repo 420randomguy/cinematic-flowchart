@@ -7,7 +7,7 @@ import { InputSection } from "@/components/nodes/sections/InputSection"
 import { TextInput } from "@/components/ui/TextInput"
 import { useNodeState } from "@/hooks/useNodeState"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
-import { Zap } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import type { NodeProps } from "reactflow"
 import { useReactFlow } from 'reactflow'
 import type { TextNodeData } from "@/types/node-types"
@@ -65,12 +65,19 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
     }
   }, [data.content, promptText])
 
+  // Handle the sparkle icon click (future API integration point)
+  const handleSparkleClick = useCallback(() => {
+    // This will be connected to the xai-org API in the future
+    console.log("Sparkle icon clicked - future API integration point")
+  }, [])
+
   return (
     <BaseNode
       id={id}
       data={{
         ...data,
         content: promptText,  // Ensure content is passed through data
+        category: "text",     // Ensure category is set for proper rendering
       }}
       nodeType="text"
       title={data.title || "TEXT"}
@@ -84,10 +91,13 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
         isGenerated: false,
       }}
     >
-      <div className="px-2 py-1">
+      <div className="px-2 py-0">
         <div className="flex items-center gap-1 text-[8px] text-gray-500 mb-1">
-          <Zap className="h-2.5 w-2.5 text-yellow-600/70" />
-          <span className="tracking-wide">xai-org driven</span>
+          <Sparkles 
+            className="h-2.5 w-2.5 text-yellow-600/70 cursor-pointer hover:text-yellow-500 transition-colors" 
+            onClick={handleSparkleClick}
+          />
+          <span className="tracking-wide">v0</span>
         </div>
 
         <InputSection>

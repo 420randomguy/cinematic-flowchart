@@ -22,9 +22,6 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   // Use stores with stable selectors
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
   const updateNodeImage = useFlowchartStore(updateNodeImageSelector)
-  
-  // Debug check for updateNodeImage function
-  console.log(`[ImageNode] updateNodeImage function defined:`, !!updateNodeImage);
 
   // Get functions from visual mirror store
   const { showContent } = useVisualMirrorStore()
@@ -32,10 +29,8 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   // Get getEdges function from React Flow
   const { getEdges, setNodes } = useReactFlow();
   
-  // Debug log for image URL changes
+  // Update force render counter when image URL changes
   useEffect(() => {
-    console.log(`[ImageNode:DEBUG] ${id} Current image URL: "${data.imageUrl || 'none'}"`);
-    // Force re-render whenever data.imageUrl changes
     setForceUpdate(prev => prev + 1);
   }, [id, data.imageUrl]);
 

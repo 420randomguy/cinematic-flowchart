@@ -6,6 +6,7 @@ import { Upload } from "lucide-react"
 import { createInteractiveProps } from "@/lib/utils/node-interaction"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { memo, useMemo } from "react"
+import { TextInput } from "@/components/ui/text-input"
 
 interface NodeContentProps {
   data: any
@@ -83,52 +84,83 @@ function NodeContentComponent({
          // Use outputImageUrl or data.imageUrl, preferring outputImageUrl if both exist
          const displayImageUrl = outputImageUrl || data?.imageUrl;
          return (
-           <div className="relative w-full h-full">
-             <img src={displayImageUrl} alt="Node Image" className="object-cover w-full h-full" />
-             {/* Add an overlay div that creates a 50% central clickable area */}
-             {handleClick && (
-               <div 
-                 className="absolute top-1/4 left-1/4 w-1/2 h-1/2 cursor-pointer"
-                 onClick={(e) => {
-                   e.stopPropagation(); // Prevent event from bubbling to node drag
-                   handleClick();
-                 }}
-               />
-             )}
+           <div className="relative w-full h-full min-h-[80px] flex items-center justify-center">
+             <img 
+               src={displayImageUrl} 
+               alt="Uploaded content"
+               className="object-cover max-w-full max-h-full" 
+             />
            </div>
          );
       } else {
+         // No image, show upload prompt
          return (
-           <div 
-             ref={dropRef} 
-             onDragOver={handleDragOver} 
-             onDragLeave={handleDragLeave} 
-             onDrop={handleDrop} 
-             onClick={handleClick} 
-             className={`w-full h-full flex flex-col items-center justify-center gap-1 p-2 ${isDragging ? "bg-gray-800/50 border-2 border-dashed border-yellow-300/50" : ""} ${handleClick ? "cursor-pointer" : ""}`}
-            >
-             <Upload className="h-4 w-4 text-gray-500" />
-             <div className="text-[9px] text-gray-400 text-center">
-               {handleClick ? "Click to select or drag image" : "Connect image node"} 
-             </div>
+           <div className="w-full h-full min-h-[80px] flex flex-col items-center justify-center p-6">
+             <Upload className="h-5 w-5 mb-2 text-gray-500" />
+             <div className="text-[9px] text-gray-500 text-center">Click to select or drag image</div>
            </div>
          );
       }
-    } else {
-      // For text nodes or other types, just show an empty container
-      if (data?.category === "text") {
-        return <div className="w-full h-full"></div>;
-      }
-      
-      // For other node types, keep the standard message
+    }
+    // For text nodes, we return a textarea
+    if (data?.category === "text") {
       return (
-        <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2">
-           <div className="text-[9px] text-gray-400 text-center">
-             {isVideoOutputNode ? "Video input needed" : "Image input needed"}
-           </div>
+        <div className="w-full">
+          <TextInput
+            value={data?.content || ""}
+            onChange={(value) => {
+              // Set that we're interacting with input first
+              handleInputInteraction(true);
+              // Then update the content if there's a handler
+              if (data?.onContentChange) {
+                data.onContentChange(value);
+              }
+            }}
+            placeholder="Enter your prompt here..."
+            className="min-h-[80px] p-6 node-text-input"
+          />
         </div>
       );
     }
+    
+    // For nodes that should show previews of inputs
+    if (isOutputNode) {
+      const hasImageUrl = !!sourceImageUrl;
+      
+      return (
+        <div className="w-full flex flex-col gap-2">
+          {/* Image input preview - show placeholder if no image */}
+          <div className="w-full min-h-[80px] flex flex-col items-center justify-center">
+            {hasImageUrl ? (
+              <img 
+                src={sourceImageUrl} 
+                alt="Source content" 
+                className="object-cover max-w-full max-h-full" 
+              />
+            ) : (
+              <div className="w-full h-full min-h-[80px] flex flex-col items-center justify-center p-6">
+                <Upload className="h-5 w-5 mb-2 text-gray-500" />
+                <div className="text-[9px] text-gray-500 text-center">Connect image node</div>
+              </div>
+            )}
+          </div>
+          
+          {/* Text input preview - truncated to 25 chars */}
+          {sourceNodeContent && (
+            <div className="px-6 pb-2 node-text-preview">
+              {sourceNodeContent.length > 25 
+                ? sourceNodeContent.substring(0, 25) + "..." 
+                : sourceNodeContent}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Default empty state for any other node types
+    return (
+      <div className="min-h-[80px]"></div>
+    );
   };
 
   return (

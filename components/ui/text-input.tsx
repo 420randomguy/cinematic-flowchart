@@ -41,7 +41,7 @@ const TextInput = forwardRef<HTMLTextAreaElement, TextInputProps>(
     }
 
     return (
-      <div className={`border-t border-b border-gray-800/50 py-1.5 my-0.5 relative ${className}`}>
+      <div className={`${className}`}>
         <div className="relative">
           <textarea
             ref={textareaRef || ref}

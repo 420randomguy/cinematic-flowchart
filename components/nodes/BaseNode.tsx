@@ -292,7 +292,7 @@ function BaseNodeComponent({
 
       {/* Submit button - Conditionally Rendered */}
       {handleSubmitToggle && (
-         <div className="flex items-center justify-between border-t border-b border-gray-800/50 py-1.5 my-0.5 px-2">
+         <div className="flex items-center justify-between px-2">
           <SubmitButton
             isSubmitting={isSubmitting}
             isGenerated={isGenerated}

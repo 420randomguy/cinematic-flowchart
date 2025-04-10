@@ -59,44 +59,10 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
 
   // Handle submit toggle (keep this local since it's just UI state)
   const handleSubmitToggle = useCallback(() => {
-    if (isSubmitting) {
-      setIsSubmitting(false)
-      setTimeRemaining(5)
-    } else if (isGenerated) {
-      // Handle regeneration
-      setIsSubmitting(true)
-      setIsGenerated(false)
-
-      // Simulate generation process
-      let time = 5
-      const interval = setInterval(() => {
-        time--
-        setTimeRemaining(time)
-
-        if (time <= 0) {
-          clearInterval(interval)
-          setIsSubmitting(false)
-          setIsGenerated(true)
-        }
-      }, 1000)
-    } else {
-      // Handle initial generation
-      setIsSubmitting(true)
-
-      // Simulate generation process
-      let time = 5
-      const interval = setInterval(() => {
-        time--
-        setTimeRemaining(time)
-
-        if (time <= 0) {
-          clearInterval(interval)
-          setIsSubmitting(false)
-          setIsGenerated(true)
-        }
-      }, 1000)
-    }
-  }, [isSubmitting, isGenerated])
+    // Create a render node using the flowchart store
+    const createRenderNode = useFlowchartStore((state) => state.createRenderNode)
+    createRenderNode(id)
+  }, [id])
 
   // Memoize common node props to prevent unnecessary re-renders
   const nodeProps = useMemo(() => ({

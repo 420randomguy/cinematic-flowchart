@@ -14,11 +14,14 @@ interface VisualMirrorState {
 export const useVisualMirrorStore = create<VisualMirrorState>((set) => ({
   visibleContent: {}, // nodeId -> { text, imageUrl }
   
-  // Only update visuals when data is confirmed ready
+  // Merge new content with existing content instead of replacing it
   showContent: (nodeId, content) => set(state => ({
     visibleContent: {
       ...state.visibleContent,
-      [nodeId]: content
+      [nodeId]: {
+        ...state.visibleContent[nodeId], // Keep existing content
+        ...content // Merge with new content
+      }
     }
   })),
   

@@ -14,11 +14,38 @@ alwaysApply: true
 - Core node connection logic in useFlowchartStore.ts
 - Node type definitions in dynamic-node-types.ts
 - Connection validation system in flowchart-utils.ts and node-model.ts
-✅ Code Organization
 - Keep node-related logic in designated files
 - Follow the established node connection system
 - Respect the connection validation rules
-✅ Feature Status
 - Core node connection logic works in useFlowchartStore.ts
 - Node type definitions work in dynamic-node-types.ts
 - Connection validation system works in flowchart-utils.ts and node-model.ts
+
+# VisualMirror System
+
+## Core Functionality
+- VisualMirror displays content from the visual mirror store based on nodeId
+- Content types: text and image, which must work independently
+- Three component variants: VisualMirrorImage, VisualMirrorText, and VisualMirror (both)
+
+## Implementation Rules
+- Keep logic simple - direct checks for content existence
+- No interdependency between text and image content
+- Must preserve both text and image when either is updated
+- Store operations must merge content, not replace
+
+## Content Management
+- Content updates are handled by useVisualMirrorStore
+- The store merges new content with existing content
+- TextNode updates only change text properties
+- ImageNode updates only change image properties
+
+## Do Not Change
+- The simple existence checks in VisualMirrorComponent
+- The 25 character limit logic in VisualMirrorText
+- The independent rendering of each content type
+- The merge behavior in useVisualMirrorStore
+
+## Connection Rules
+- Connection limitations (one node per type) are handled at the flowchart level, not in VisualMirror
+- VisualMirror should always show whatever content is in the store

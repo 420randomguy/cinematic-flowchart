@@ -11,6 +11,7 @@ import { useImageHandling } from "@/hooks/useImageHandling"
 import { useMemoizedNodeProps } from "@/hooks/useMemoizedNodeProps"
 import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 import { Upload } from "lucide-react"
+import { VisualMirrorImage } from "@/components/nodes/VisualMirror"
 
 // Create stable selectors outside the component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
@@ -24,8 +25,12 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
   const updateNodeImage = useFlowchartStore(updateNodeImageSelector)
 
-  // Get functions from visual mirror store
-  const { showContent } = useVisualMirrorStore()
+  // Get functions from visual mirror store and its content
+  const { showContent, visibleContent } = useVisualMirrorStore()
+  const visualData = visibleContent[id] || {}
+  
+  // Check if we have an image in either the visual mirror or data prop
+  const hasImage = !!visualData.imageUrl || !!data.imageUrl
 
   // Get getEdges function from React Flow
   const { getEdges, setNodes } = useReactFlow();
@@ -88,6 +93,46 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
         });
       }, [id, updateNodeImage, getEdges, showContent, setNodes]),
   })
+  
+  // Enhanced drag handler for better image replacement
+  const enhancedDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleDragOver(e);
+  }, [handleDragOver]);
+  
+  // Enhanced drop handler to ensure image replacement works consistently
+  const enhancedDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const imageUrl = reader.result as string;
+          // Always update both the store AND visual mirror for consistency
+          updateNodeImage(id, imageUrl);
+          showContent(id, { imageUrl });
+          
+          // Update React Flow node data
+          setNodes((nodes) => 
+            nodes.map((node) => 
+              node.id === id 
+                ? { ...node, data: { ...node.data, imageUrl } }
+                : node
+            )
+          );
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    
+    // Call original handler as fallback
+    handleDrop(e);
+  }, [id, updateNodeImage, showContent, setNodes, handleDrop]);
 
   return (
     <>
@@ -102,9 +147,9 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
         contentProps={{
           imageUrl: data.imageUrl,
           isDragging,
-          handleDragOver,
+          handleDragOver: enhancedDragOver,
           handleDragLeave,
-          handleDrop,
+          handleDrop: enhancedDrop,
           handleClick,
           isSubmitting: false,
           isGenerated: false,
@@ -118,21 +163,19 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
         <div 
           className="w-full relative"
           onClick={handleClick}
-          onDragOver={handleDragOver}
+          onDragOver={enhancedDragOver}
           onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
+          onDrop={enhancedDrop}
           ref={dropRef}
         >
-          {data.imageUrl ? (
-            <div className="relative w-full h-full min-h-[80px] flex items-center justify-center">
-              <img 
-                src={data.imageUrl} 
-                alt="Uploaded content"
-                className="object-cover max-w-full max-h-full" 
-              />
-            </div>
-          ) : (
-            <div className="w-full h-full min-h-[80px] flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-900/20 transition-colors">
+          {/* Use VisualMirrorImage with hidePrompt=true to prevent showing "Connect image node" text */}
+          <div className="visual-mirror-wrapper custom-image-node">
+            <VisualMirrorImage nodeId={id} hidePrompt={true} />
+          </div>
+          
+          {/* Only show upload prompt when no image exists in both store and data */}
+          {!hasImage && (
+            <div className="absolute inset-0 w-full h-full min-h-[80px] flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-900/20 transition-colors">
               <Upload className="h-5 w-5 mb-2 text-gray-500" />
               <div className="text-[9px] text-gray-500 text-center">Click to select or drag image</div>
             </div>

@@ -7,6 +7,7 @@ export type NodeCategory =
   | "image-to-image"
   | "text-to-video"
   | "image-to-video"
+  | "render"
 
 // Define what inputs each node type accepts
 export interface NodeConnectionRules {
@@ -108,6 +109,17 @@ export const NODE_MODELS: Record<
       quality: 80,
       seed: Math.floor(Math.random() * 1000000000).toString(),
     },
+  },
+  "render": {
+    title: "RENDER",
+    rules: {
+      acceptsTextInput: true,
+      acceptsImageInput: true,
+      outputsText: false,
+      outputsImage: false,
+      outputsVideo: false,
+    },
+    defaultSettings: {},
   },
 }
 

@@ -36,6 +36,7 @@ import ElementReferencePanel from "@/components/ui/element-reference-panel"
 // Import stores
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useImageLibraryStore } from "@/store/useImageLibraryStore"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // Import node types - import at module level, outside any component
 import { nodeTypes, preloadAllNodeTypes } from "@/lib/utils/dynamic-node-types"
@@ -77,6 +78,9 @@ function FlowchartCanvasInner() {
 
   // Add asset function from the image library store
   const { addAsset } = useImageLibraryStore()
+  
+  // Get visual mirror functions
+  const { showContent } = useVisualMirrorStore()
 
   // Refs
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
@@ -505,13 +509,19 @@ function FlowchartCanvasInner() {
 
               // Add the node to the flow
               setNodes((nodes) => [...nodes, newNode])
+              
+              // IMPORTANT: Update the Visual Mirror Store
+              // This ensures the image will display in the node
+              showContent(id, { imageUrl: dataUrl })
+              
+              console.log(`[FlowchartCanvas] Created new image node with id=${id} and updated VisualMirrorStore`)
             }
             reader.readAsDataURL(file)
           }
         }
       }
     },
-    [screenToFlowPosition, saveState, addAsset, setNodes],
+    [canvasWrapperRef, saveState, addAsset, setNodes, showContent],
   )
 
   /**
@@ -664,12 +674,12 @@ function FlowchartCanvasInner() {
             deleteKeyCode="Delete"
             connectionLineType={ConnectionLineType.SmoothStep}
             connectionLineStyle={{ stroke: "#444", strokeWidth: 1 }}
-            selectNodesOnDrag={false}
+            selectNodesOnDrag={true}
             nodeDragThreshold={5}
             selectionMode={SelectionMode.Partial}
             zoomOnDoubleClick={false}
             nodesDraggable={!isInteractingWithInput}
-            panOnDrag={!isInteractingWithInput}
+            panOnDrag={!isInteractingWithInput ? [1] : false}
             onNodeDragStart={handleNodeDragStart}
             onNodeDrag={() => { /* Placeholder: Add logic if needed, e.g., nodeMovedRef.current = true; Ensure ref is defined */ }}
             onNodeDragStop={handleNodeDragStop}

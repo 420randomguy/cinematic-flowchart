@@ -204,8 +204,8 @@ export default function ElementReferencePanel() {
               </div>
 
               <div className="space-y-1">
-                <div className="text-gray-300 font-medium">NodeContent</div>
-                <div className="text-gray-500 text-[10px]">Main content area for nodes</div>
+                <div className="text-gray-300 font-medium">VisualMirror</div>
+                <div className="text-gray-500 text-[10px]">Content display for text and images</div>
               </div>
 
               <div className="space-y-1">

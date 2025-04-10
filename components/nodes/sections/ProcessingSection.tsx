@@ -12,29 +12,22 @@ interface ProcessingSectionProps {
   timeRemaining?: number
   onSubmit?: () => void
   showSubmitButton?: boolean
+  nodeId?: string
 }
 
 function ProcessingSectionComponent({
   children,
   className = "",
   title,
-  isSubmitting = false,
-  isGenerated = false,
-  timeRemaining,
-  onSubmit,
   showSubmitButton = false,
+  nodeId,
 }: ProcessingSectionProps) {
   return (
     <div className={`border-t border-gray-800/50 pt-2 pb-1 ${className}`}>
       {title && <div className="text-[9px] uppercase text-gray-500 tracking-wide mb-1.5">{title}</div>}
 
-      {showSubmitButton && onSubmit && (
-        <SubmitButton
-          isSubmitting={isSubmitting}
-          isGenerated={isGenerated}
-          onClick={onSubmit}
-          timeRemaining={timeRemaining}
-        />
+      {showSubmitButton && nodeId && (
+        <SubmitButton nodeId={nodeId} />
       )}
 
       {children}
@@ -43,4 +36,5 @@ function ProcessingSectionComponent({
 }
 
 export const ProcessingSection = memo(ProcessingSectionComponent)
+ProcessingSection.displayName = "ProcessingSection"
 

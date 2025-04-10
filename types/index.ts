@@ -78,12 +78,13 @@ export interface NodeHeaderProps {
 
 // Update SubmitButtonProps to ensure consistency
 export interface SubmitButtonProps {
-  isSubmitting: boolean
-  isGenerated: boolean
-  onClick: () => void
+  isSubmitting?: boolean
+  isGenerated?: boolean
+  onClick?: () => void
   timeRemaining?: number
   disabled?: boolean
   handleInputInteraction?: (isInteracting?: boolean) => void
+  nodeId?: string
 }
 
 export interface InteractiveElementProps {

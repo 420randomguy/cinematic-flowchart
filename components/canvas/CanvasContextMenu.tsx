@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, useRef, useEffect } from "react"
-import { FileText, Image, Video, Wand2, Layers, X } from "lucide-react"
+import { FileText, Image, Video, Wand2, Layers, X, Film } from "lucide-react"
 
 interface CanvasContextMenuProps {
   position: { x: number; y: number; sourceNodeId?: string }
@@ -86,15 +86,6 @@ function CanvasContextMenu({ position, onClose, onAddNode, sourceNodeId }: Canva
         {/* Output Nodes Section */}
         <div className="text-[9px] text-gray-500 uppercase tracking-wider mt-3 mb-1 px-2">Output Nodes</div>
 
-        {/* Text to Image Node */}
-        <button
-          className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 rounded-sm"
-          onClick={() => onAddNode("text-to-image")}
-        >
-          <Wand2 className="h-3.5 w-3.5 text-gray-500" />
-          <span>Text to Image</span>
-        </button>
-
         {/* Image to Image Node */}
         <button
           className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 rounded-sm"
@@ -102,6 +93,24 @@ function CanvasContextMenu({ position, onClose, onAddNode, sourceNodeId }: Canva
         >
           <Layers className="h-3.5 w-3.5 text-gray-500" />
           <span>Image to Image</span>
+        </button>
+
+        {/* Image to Video Node */}
+        <button
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 rounded-sm"
+          onClick={() => onAddNode("image-to-video")}
+        >
+          <Video className="h-3.5 w-3.5 text-gray-500" />
+          <span>Image to Video</span>
+        </button>
+
+        {/* Text to Image Node */}
+        <button
+          className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 rounded-sm"
+          onClick={() => onAddNode("text-to-image")}
+        >
+          <Wand2 className="h-3.5 w-3.5 text-gray-500" />
+          <span>Text to Image</span>
         </button>
 
         {/* Text to Video Node */}
@@ -112,14 +121,17 @@ function CanvasContextMenu({ position, onClose, onAddNode, sourceNodeId }: Canva
           <Video className="h-3.5 w-3.5 text-gray-500" />
           <span>Text to Video</span>
         </button>
-
-        {/* Image to Video Node */}
+        
+        {/* Render Section */}
+        <div className="text-[9px] text-gray-500 uppercase tracking-wider mt-3 mb-1 px-2">Render Nodes</div>
+        
+        {/* Render Node */}
         <button
           className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-[11px] text-gray-300 hover:bg-gray-800 rounded-sm"
-          onClick={() => onAddNode("image-to-video")}
+          onClick={() => onAddNode("render")}
         >
-          <Video className="h-3.5 w-3.5 text-gray-500" />
-          <span>Image to Video</span>
+          <Film className="h-3.5 w-3.5 text-gray-500" />
+          <span>Render</span>
         </button>
       </div>
     </div>

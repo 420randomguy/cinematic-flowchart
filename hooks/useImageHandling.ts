@@ -215,14 +215,43 @@ export function useImageHandling({
       if (e.target.files && e.target.files.length > 0) {
         const file = e.target.files[0];
         if (file.type.startsWith("image/")) {
-          processImageFile(file); // Use the processing function
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const imageUrl = reader.result as string;
+              if (!imageUrl) return;
+              
+              // Save to library
+              addImage({ url: imageUrl, type: "image", title: "Uploaded Image" });
+              
+              // Directly apply the image to the node (instead of just processing it)
+              console.log("[useImageHandling] Uploading and auto-selecting image");
+              finalizeImageUpdate(imageUrl, file);
+              
+              // Close the dialog after selection
+              setShowImageSelector(false);
+              handleInputInteraction?.(false);
+            } catch (error) { 
+              console.error("Error processing uploaded file:", error); 
+            }
+          };
+          reader.onerror = () => { console.error("Error reading file:", reader.error); };
+          try { 
+            reader.readAsDataURL(file); 
+          } catch (error) { 
+            console.error("Error reading file as data URL:", error); 
+          }
         }
+      } else {
+        // Close dialog if no files were selected
+        setShowImageSelector(false);
+        handleInputInteraction?.(false);
       }
-      setShowImageSelector(false);
-      handleInputInteraction?.(false);
+      
+      // Reset the file input
       if (e.target) { e.target.value = ""; }
     },
-    [processImageFile, handleInputInteraction, setShowImageSelector], // processImageFile includes finalizeImageUpdate
+    [addImage, finalizeImageUpdate, handleInputInteraction, setShowImageSelector]
   );
 
   // Effect to update local state if initial data changes (e.g., undo/redo)

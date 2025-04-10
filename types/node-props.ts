@@ -105,12 +105,13 @@ export interface NodeActionsProps {
  * Props for submit button component
  */
 export interface SubmitButtonProps {
-  isSubmitting: boolean
-  isGenerated: boolean
-  onClick: () => void
+  isSubmitting?: boolean
+  isGenerated?: boolean
+  onClick?: () => void
   timeRemaining?: number
   disabled?: boolean
   handleInputInteraction?: (isInteracting?: boolean) => void
+  nodeId?: string
 }
 
 /**

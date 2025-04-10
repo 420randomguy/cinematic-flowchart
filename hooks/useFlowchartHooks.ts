@@ -7,6 +7,7 @@ import { useConnections } from "@/contexts/ConnectionContext"
 import { handleDragOver as utilHandleDragOver, handleDragLeave as utilHandleDragLeave } from "@/lib/utils/drag-drop"
 import { ImageLibraryContext } from "@/contexts/ImageLibraryContext"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // ==========================================
 // Node State Hook
@@ -493,11 +494,14 @@ export function useImageHandling({ id, data, onImageSelect, onImageUpload, onDra
 // ==========================================
 export function useNodeConnections({ id, textHandleId = "text", imageHandleId = "image", loraHandleId = "lora" }) {
   const [textContent, setTextContent] = useState("")
-  const [imageUrl, setImageUrl] = useState(null)
+  const [imageUrl, setImageUrl] = useState("")
   const [loraContent, setLoraContent] = useState(null)
-
+  const { setNodes, getNodes, getEdges } = useReactFlow()
   const { connectionLookup, getNodeContent, getNodeImageUrl } = useConnections()
-  const { setNodes, getNodes } = useReactFlow()
+  const { showContent } = useVisualMirrorStore()
+  
+  // Source nodes we've found
+  let sourceNodeIds = []
 
   // Get connected text nodes (text nodes)
   const connectedTextNodes = useMemo(() => {
@@ -580,8 +584,6 @@ export function useNodeConnections({ id, textHandleId = "text", imageHandleId = 
     }
   }, [connectedLoraNodes, getNodeContent])
 
-  let sourceNodeIds = []
-
   // Function to directly check for content changes in source nodes
   const checkSourceNodesForContent = useCallback(() => {
     if (sourceNodeIds.length === 0) {
@@ -600,28 +602,15 @@ export function useNodeConnections({ id, textHandleId = "text", imageHandleId = 
         // Found content, update it
         setTextContent(sourceNode.data.content)
 
-        // Update the node data directly
-        setNodes((nodes) =>
-          nodes.map((node) =>
-            node.id === id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    sourceNodeContent: sourceNode.data.content,
-                    _lastUpdated: Date.now(),
-                  },
-                }
-              : node,
-          ),
-        )
+        // Update the VisualMirror store instead of node data
+        showContent(id, { text: sourceNode.data.content })
 
         return true
       }
     }
 
     return false
-  }, [id, connectionLookup, getNodes, setNodes, setTextContent])
+  }, [id, connectionLookup, getNodes, setTextContent, showContent])
 
   return {
     connectedTextNode: connectedTextNodes[0] || null,

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Bug, X, Database, Trash2, RefreshCw, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import type { Node } from "reactflow"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected"
 
@@ -24,6 +25,8 @@ export default function DebugPanel() {
   
   // Get nodes from store
   const nodes = useFlowchartStore(state => state.nodes)
+  const edges = useFlowchartStore((state) => state.edges)
+  const { visibleContent } = useVisualMirrorStore()
 
   // Simulate checking API connections
   useEffect(() => {
@@ -91,10 +94,14 @@ export default function DebugPanel() {
   }
 
   // Add the Text Content Debug section
-  const getNodesWithSourceData = () => {
-    // Filter nodes that have either sourceNodeContent OR sourceImageUrl
-    return nodes.filter((n: Node) => n.data?.sourceNodeContent || n.data?.sourceImageUrl)
-  }
+  const getNodesWithSourceData = useCallback(() => {
+    // Filter nodes that have either visual mirror content OR sourceImageUrl
+    return nodes.filter((n: Node) => 
+      visibleContent[n.id]?.text || 
+      visibleContent[n.id]?.imageUrl || 
+      n.data?.sourceImageUrl
+    )
+  }, [nodes, visibleContent])
 
   return (
     <div className="fixed bottom-4 right-4 z-50 font-mono">
@@ -201,9 +208,9 @@ export default function DebugPanel() {
               {getNodesWithSourceData().map((node: Node) => (
                 <div key={node.id} className="text-[9px] border border-gray-800 p-2 rounded-sm">
                   <div className="font-semibold text-gray-400">Node: {node.id} ({node.type})</div>
-                  {node.data.sourceNodeContent && (
+                  {visibleContent[node.id]?.text && (
                     <div className="text-green-400 break-words mt-1">
-                      Content: {node.data.sourceNodeContent}
+                      Content: {visibleContent[node.id].text}
                     </div>
                   )}
                   {node.data.sourceImageUrl && (

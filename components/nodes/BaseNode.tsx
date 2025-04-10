@@ -8,12 +8,12 @@ import { Position, useReactFlow } from "reactflow"
 import { NodeWrapper } from "@/components/shared/NodeWrapper"
 import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
 import { SubmitButton } from "@/components/ui/submit-button"
-import { NodeContent } from "@/components/nodes/NodeContent"
 import { NodeSettings } from "@/components/ui/node-settings"
 import { NodeActions } from "@/components/ui/NodeActions"
 import { SourceHandle, TargetHandle } from "@/components/shared/NodeHandles"
 import { useNodeEvents } from "@/hooks/useNodeEvents"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
+import { VisualMirrorText, VisualMirrorImage } from "@/components/nodes/VisualMirror"
 
 // Simple DOM read function to replace the deleted utility
 const scheduleDOMRead = (fn: () => any) => requestAnimationFrame(fn)
@@ -285,9 +285,10 @@ function BaseNodeComponent({
   const hasChildren = React.Children.count(children) > 0
 
   // Determine if NodeContent should be rendered
-  // Don't render NodeContent if children are provided AND no special props are passed to contentProps
-  const shouldRenderNodeContent = !hasChildren || 
-    Object.keys(contentProps).some(key => ['isSubmitting', 'isGenerated', 'outputImageUrl'].includes(key))
+  // Only render for output nodes or when specific output-related props are present
+  const shouldRenderNodeContent = (isOutputNode || 
+    Object.keys(contentProps).some(key => ['outputImageUrl'].includes(key))) && 
+    (!hasChildren || contentProps.onContentChange !== null)
 
   return (
     <NodeWrapper id={id} type={nodeType} isNewNode={data.isNewNode} onClick={handleNodeClick} ref={nodeRef}>
@@ -302,32 +303,37 @@ function BaseNodeComponent({
       {/* Submit button - Conditionally Rendered */}
       {handleSubmitToggle && (
          <div className="flex items-center justify-between px-2">
-          <SubmitButton
-            isSubmitting={isSubmitting}
-            isGenerated={isGenerated}
-            onClick={handleSubmitToggle}
-            timeRemaining={timeRemaining}
-          />
+          <SubmitButton nodeId={id} />
         </div>
       )}
 
-      {/* NodeContent - Render only if shouldRenderNodeContent is true */}
+      {/* NodeContent - Replace with VisualMirror components */}
       {shouldRenderNodeContent && (
-        <NodeContent
-          data={data}
-          isSubmitting={isSubmitting}
-          isGenerated={isGenerated}
-          sourceNodeContent={data.sourceNodeContent}
-          sourceImageUrl={data.sourceImageUrl}
-          outputImageUrl={data.imageUrl}
-          isOutputNode={isOutputNode}
-          handleClick={contentProps.handleClick}
-          handleDragOver={contentProps.handleDragOver}
-          handleDragLeave={contentProps.handleDragLeave}
-          handleDrop={contentProps.handleDrop}
-          dropRef={contentProps.dropRef}
-          isDragging={contentProps.isDragging}
-        />
+        <div className="node-content-container">
+          {/* Use VisualMirrorText for any source content from text nodes */}
+          {hasSourceContent && <VisualMirrorText nodeId={id} />}
+          
+          {/* Use VisualMirrorImage for displaying images */}
+          {(data.showImage || hasSourceImage || data.imageUrl) && (
+            <div className={`relative ${isSubmitting ? 'opacity-50' : ''}`}>
+              <VisualMirrorImage 
+                nodeId={id} 
+                hidePrompt={nodeType === "text-to-image" || nodeType === "text-to-video"}
+              />
+            </div>
+          )}
+          
+          {/* For image upload nodes, add the drag-drop event handlers */}
+          {nodeType === "image" && contentProps.handleDrop && (
+            <div 
+              className="absolute inset-0 z-10"
+              onDragOver={contentProps.handleDragOver}
+              onDragLeave={contentProps.handleDragLeave}
+              onDrop={contentProps.handleDrop}
+              onClick={contentProps.handleClick}
+            />
+          )}
+        </div>
       )}
 
       {/* Children (e.g., specific inputs/settings for derived nodes) */}

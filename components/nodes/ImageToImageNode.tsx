@@ -5,13 +5,12 @@ import { BaseNode } from "@/components/nodes/BaseNode"
 import { useNodeState } from "@/hooks/useNodeState"
 import { useImageHandling } from "@/hooks/useImageHandling"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
-import { useNodeConnections } from "@/hooks/useNodeConnections"
 import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
 import type { NodeProps } from "reactflow"
 import type { ImageToImageNodeData } from "@/types/node-types"
 import { useReactFlow } from "reactflow"
-import { VisualMirror, VisualMirrorImage, VisualMirrorText } from "@/components/nodes/VisualMirror"
-import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
+import { VisualMirrorImage, VisualMirrorText } from "@/components/nodes/VisualMirror"
+import { useVisualMirrorUpdate } from "@/hooks/useVisualMirrorUpdate"
 
 // Create stable selector outside of the component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
@@ -19,9 +18,6 @@ const setIsInteractingWithInputSelector = (state: any) => state.setIsInteracting
 function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNodeData>) {
   // Use the store with stable selector
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
-  
-  // Get functions from the visual mirror store
-  const { showContent, clearContent } = useVisualMirrorStore()
   
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
@@ -51,6 +47,9 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     initialModelId: "flux-dev",
   })
 
+  // Use the visual mirror update hook to sync node data with the store
+  useVisualMirrorUpdate(id, data, isSubmitting)
+
   // Use the image handling hook
   const {
     isDragging,
@@ -70,39 +69,29 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     handleInputInteraction,
   })
 
-  // Check if an image node is connected (use props.data)
-  const hasConnectedSourceImage = !!data.sourceImageUrl
-
   // Determine the image URL to *display* as the source, directly from props.data
   const sourceImageUrlToDisplay = data.sourceImageUrl || data.imageUrl || null
   
   // Determine the text content to display directly from props.data
   const textContentToDisplay = data.sourceNodeContent || data.content || ""
+  
   // This node *outputs* an image, stored in data.outputImageUrl or data.imageUrl
   const outputImageUrl = data.outputImageUrl || data.imageUrl // Check type definition
 
-  // Update the visual mirror store when data changes
-  useEffect(() => {
-    // Check if we have required data for this node
-    const hasValidData = !!textContentToDisplay || !!sourceImageUrlToDisplay
-    
-    if (hasValidData) {
-      // Update visual mirror with current content
-      showContent(id, {
-        text: textContentToDisplay,
-        imageUrl: sourceImageUrlToDisplay || undefined
-      })
-    } else {
-      // Clear visual mirror if no valid data
-      clearContent(id)
-    }
-  }, [id, textContentToDisplay, sourceImageUrlToDisplay, showContent, clearContent])
-
-  // Get ReactFlow utilities
-  const { getNodes, setNodes } = useReactFlow()
+  // Update data object with output image URL when generated
+  if (isGenerated && outputImageUrl && !isSubmitting) {
+    data.imageUrl = outputImageUrl;
+  }
 
   // Define target handles
   const targetHandleIds = useMemo(() => ["image", "text", "lora"], [])
+
+  // Check if input requirements are met
+  const hasConnectedText = !!textContentToDisplay;
+  const hasConnectedSourceImage = !!sourceImageUrlToDisplay;
+  
+  // Update submit button disabled state based on connections
+  const isSubmitDisabled = !hasConnectedText || !hasConnectedSourceImage;
 
   return (
     <>
@@ -126,12 +115,18 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
           modelId={selectedModelId}
           onModelChange={handleModelChange}
           contentProps={{
-            // Remove these props as we're replacing NodeContent with VisualMirror
             isSubmitting,
             isGenerated,
             timeRemaining,
             handleSubmitToggle,
-            category: "image-to-image"
+            category: "image-to-image",
+            disabled: isSubmitDisabled,
+            handleDragOver,
+            handleDragLeave,
+            handleDrop,
+            handleClick,
+            dropRef,
+            isDragging
           }}
           settingsProps={{
             quality,
@@ -143,25 +138,13 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
             modelSettings,
             handleSettingsChange,
           }}
-          actionsProps={{
-            // Actions relate to the *output* image
-            imageUrl: outputImageUrl,
-          }}
         >
           {/* Add VisualMirrorImage inside BaseNode within NodeContent */}
           {isSubmitting ? (
             <div className="text-[9px] text-gray-400 p-2 text-center">Generating...</div>
-          ) : isGenerated ? (
-            <div className="relative w-full h-full">
-              <img 
-                src={outputImageUrl || "/sample-image.png"} 
-                alt="Generated content" 
-                className="object-cover w-full h-full" 
-              />
-            </div>
           ) : (
-            <div className="visual-mirror-wrapper">
-              <VisualMirrorImage nodeId={id} />
+            <div className="relative w-full h-full">
+              {/* VisualMirrorImage removed from here to avoid duplication */}
             </div>
           )}
 

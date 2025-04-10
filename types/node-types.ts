@@ -18,7 +18,6 @@ export interface BaseNodeData {
   isNewNode?: boolean
   autoSubmit?: boolean
   imageUrl?: string
-  sourceNodeContent?: string
   onImageUpload?: (file: File, string: any) => void
   onImageSelect?: (imageUrl: string) => void
   _hasInitializedConnections?: boolean
@@ -46,7 +45,6 @@ export interface VideoNodeData extends BaseNodeData {
 
 export interface TextNodeData extends BaseNodeData {
   content: string
-  sourceNodeContent?: string
 }
 
 export interface ImageToImageNodeData extends BaseNodeData {
@@ -58,6 +56,5 @@ export interface ImageToImageNodeData extends BaseNodeData {
 
 export interface AnalysisNodeData extends BaseNodeData {
   content: string
-  sourceNodeContent?: string
 }
 

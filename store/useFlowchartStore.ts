@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { devtools, persist } from "zustand/middleware"
 import { type Edge, type Node, applyEdgeChanges, applyNodeChanges, type Connection, addEdge } from "reactflow"
 import type { RefObject } from 'react'
+import { getSourceHandle } from "@/types/node-model"
 
 interface HistoryState {
   nodes: Node[]
@@ -75,6 +76,9 @@ interface FlowchartState {
   redo: () => void
   clearContextMenu: () => void
   setCanvasContainerRef: (ref: RefObject<HTMLDivElement> | null) => void
+
+  // New function to create a render node
+  createRenderNode: (sourceNodeId: string) => string
 }
 
 export const useFlowchartStore = create<FlowchartState>()(
@@ -289,7 +293,6 @@ export const useFlowchartStore = create<FlowchartState>()(
                     ...node,
                     data: {
                       ...node.data,
-                      sourceNodeContent: content,
                       _lastUpdated: Date.now()
                     }
                   };
@@ -559,6 +562,72 @@ export const useFlowchartStore = create<FlowchartState>()(
         clearContextMenu: () => set({ contextMenu: null }),
 
         setCanvasContainerRef: (ref) => set({ canvasContainerRef: ref }),
+
+        // Create a render node connected to the source node
+        createRenderNode: (sourceNodeId) => {
+          // Get the source node
+          const sourceNode = get().nodes.find(node => node.id === sourceNodeId);
+          if (!sourceNode) return "";
+
+          // Generate a new unique ID for the render node
+          const newNodeId = `render_${Date.now()}`;
+          
+          // Calculate position for the render node (to the right of the source node)
+          const newPosition = {
+            x: sourceNode.position.x + 300,
+            y: sourceNode.position.y,
+          };
+          
+          // Get visual mirror content from the source node
+          const sourceNodeData = sourceNode.data || {};
+          
+          // Create the new render node
+          const newNode: Node = {
+            id: newNodeId,
+            type: "render",
+            position: newPosition,
+            data: {
+              title: "Render",
+              sourceNodeId: sourceNodeId,
+              isNewNode: true,
+            },
+            selected: true
+          };
+          
+          // Create a new edge connecting the source node to the render node
+          const sourceHandle = getSourceHandle(sourceNode.type as import("@/types/node-model").NodeCategory);
+          
+          const newEdge: Edge = {
+            id: `edge_${sourceNodeId}_${newNodeId}`,
+            source: sourceNodeId,
+            sourceHandle: sourceHandle,
+            target: newNodeId,
+            targetHandle: sourceHandle,
+          };
+          
+          // Save the current state before operation
+          const { isUndoRedoing } = get();
+          if (!isUndoRedoing) {
+            get().saveState();
+          }
+          
+          // Update state with the new node and edge
+          set((state) => ({
+            nodes: [
+              ...state.nodes.map(n => ({
+                ...n,
+                selected: false, // Deselect all other nodes
+              })),
+              newNode,
+            ],
+            edges: [...state.edges, newEdge],
+            selectedNodeId: newNodeId, // Set the new node as selected
+          }));
+          
+          console.log(`[Store] Created render node ${newNodeId} connected to ${sourceNodeId}`);
+          
+          return newNodeId;
+        },
       }),
       {
         name: "flowchart-storage",

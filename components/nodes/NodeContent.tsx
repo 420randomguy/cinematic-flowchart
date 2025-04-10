@@ -53,7 +53,8 @@ function NodeContentComponent({
 
   // Determine node types for conditional rendering
   const isImageUploadNode = useMemo(
-    () => data?.category === "image" || data?.category === "image-to-image" || data?.category === "image-to-video",
+    // Only the input "image" node should show the upload UI, not any output nodes
+    () => data?.category === "image" && !data?.category?.includes("-to-"),
     [data?.category],
   );
   const isVideoOutputNode = useMemo(
@@ -102,25 +103,9 @@ function NodeContentComponent({
          );
       }
     }
-    // For text nodes, we return a textarea
+    // For text nodes, we don't render anything here - TextNode component will handle it
     if (data?.category === "text") {
-      return (
-        <div className="w-full">
-          <TextInput
-            value={data?.content || ""}
-            onChange={(value) => {
-              // Set that we're interacting with input first
-              handleInputInteraction(true);
-              // Then update the content if there's a handler
-              if (data?.onContentChange) {
-                data.onContentChange(value);
-              }
-            }}
-            placeholder="Enter your prompt here..."
-            className="min-h-[80px] p-6 node-text-input"
-          />
-        </div>
-      );
+      return null;
     }
     
     // For nodes that should show previews of inputs
@@ -129,21 +114,16 @@ function NodeContentComponent({
       
       return (
         <div className="w-full flex flex-col gap-2">
-          {/* Image input preview - show placeholder if no image */}
-          <div className="w-full min-h-[80px] flex flex-col items-center justify-center">
-            {hasImageUrl ? (
+          {/* Image input preview - only show actual image, placeholder now in VisualMirror */}
+          {hasImageUrl && (
+            <div className="w-full min-h-[80px] flex flex-col items-center justify-center">
               <img 
                 src={sourceImageUrl} 
                 alt="Source content" 
                 className="object-cover max-w-full max-h-full" 
               />
-            ) : (
-              <div className="w-full h-full min-h-[80px] flex flex-col items-center justify-center p-6">
-                <Upload className="h-5 w-5 mb-2 text-gray-500" />
-                <div className="text-[9px] text-gray-500 text-center">Connect image node</div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
           
           {/* Text input preview - truncated to 25 chars */}
           {sourceNodeContent && (
@@ -164,15 +144,11 @@ function NodeContentComponent({
   };
 
   return (
-    <div className="space-y-1.5 node-content-container">
+    <div className="node-content-container">
       <div
-        className={`relative bg-black/30 rounded-sm overflow-hidden transition-all duration-300 ease-in-out flex items-center justify-center ${data?.category === "text" ? "min-h-[20px]" : ""}`}
-        style={{
-          aspectRatio: data?.category === "text" ? "auto" : "16/9",
-          minHeight: data?.category === "text" ? "20px" : "80px", // Smaller height for text nodes
-        }}
+        className={`relative bg-black/30 overflow-hidden transition-all duration-300 ease-in-out flex items-center justify-center ${data?.category === "text" ? "node-content-text" : ""}`}
       >
-        {renderContent()} {/* Render the determined content */} 
+        {renderContent()} {/* Render the determined content */}
 
         {/* Caption (Rendered regardless of state) */} 
         {data?.caption && (

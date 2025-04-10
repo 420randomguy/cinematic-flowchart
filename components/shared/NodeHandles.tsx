@@ -24,26 +24,7 @@ export function NodeHandle({
 }: NodeHandleProps) {
   // Add class based on handle type
   const handleClass = handleType ? `handle-${handleType}` : ""
-
-  // We need to explicitly set the position in the style
-  // ReactFlow is overriding our CSS with inline styles
-  const handleStyle: React.CSSProperties = {
-    ...style,
-    // Force the position to be on the sides with exact pixel values
-    ...(position === Position.Left ? { left: "-20px" } : { right: "-20px" }),
-    // Force top to be 50%
-    top: "50%",
-    // Ensure the handle is visible
-    opacity: 1,
-    visibility: "visible",
-    width: "8px",
-    height: "8px",
-    backgroundColor: "#555",
-    borderRadius: "50%",
-    border: "2px solid #999",
-    transform: "translateY(-50%)",
-    zIndex: 100,
-  }
+  const positionClass = position === Position.Left ? "node-handle-left" : "node-handle-right"
 
   return (
     <Handle
@@ -51,8 +32,7 @@ export function NodeHandle({
       position={position}
       id={id}
       isConnectable={isConnectable}
-      style={handleStyle}
-      className={`node-handle-${position === Position.Left ? "left" : "right"} ${handleClass} ${className}`}
+      className={`node-handle ${positionClass} ${handleClass} ${className}`}
       data-handletype={handleType}
       data-handleid={id}
     />

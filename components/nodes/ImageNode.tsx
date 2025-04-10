@@ -10,6 +10,7 @@ import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useImageHandling } from "@/hooks/useImageHandling"
 import { useMemoizedNodeProps } from "@/hooks/useMemoizedNodeProps"
 import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
+import { Upload } from "lucide-react"
 
 // Create stable selectors outside the component
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
@@ -104,15 +105,40 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
           handleDragOver,
           handleDragLeave,
           handleDrop,
-          handleClick: handleClick,
+          handleClick,
           isSubmitting: false,
           isGenerated: false,
           key: `image-${data.imageUrl || "none"}-${forceUpdate}`,
+          category: "image",
         }}
         actionsProps={{
           imageUrl: data.imageUrl,
         }}
-      />
+      >
+        <div 
+          className="w-full relative"
+          onClick={handleClick}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          ref={dropRef}
+        >
+          {data.imageUrl ? (
+            <div className="relative w-full h-full min-h-[80px] flex items-center justify-center">
+              <img 
+                src={data.imageUrl} 
+                alt="Uploaded content"
+                className="object-cover max-w-full max-h-full" 
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full min-h-[80px] flex flex-col items-center justify-center p-6 cursor-pointer hover:bg-gray-900/20 transition-colors">
+              <Upload className="h-5 w-5 mb-2 text-gray-500" />
+              <div className="text-[9px] text-gray-500 text-center">Click to select or drag image</div>
+            </div>
+          )}
+        </div>
+      </BaseNode>
 
       {/* Image selector dialog */}
       <ImageSelectorDialog

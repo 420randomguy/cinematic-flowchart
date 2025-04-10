@@ -10,7 +10,7 @@ import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
 import type { NodeProps } from "reactflow"
 import type { ImageToImageNodeData } from "@/types/node-types"
 import { useReactFlow } from "reactflow"
-import { VisualMirror } from "@/components/nodes/VisualMirror"
+import { VisualMirror, VisualMirrorImage, VisualMirrorText } from "@/components/nodes/VisualMirror"
 import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 // Create stable selector outside of the component
@@ -126,22 +126,12 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
           modelId={selectedModelId}
           onModelChange={handleModelChange}
           contentProps={{
-            // Pass the store-managed source image URL for NodeContent display/logic
-            imageUrl: sourceImageUrlToDisplay,
-            // Pass text content as well
-            textContent: textContentToDisplay,
-            category: "image-to-image",
+            // Remove these props as we're replacing NodeContent with VisualMirror
             isSubmitting,
             isGenerated,
             timeRemaining,
             handleSubmitToggle,
-            // Drag/drop/click logic should be based on connection status derived from props.data
-            isDragging: hasConnectedSourceImage ? undefined : isDragging,
-            dropRef: hasConnectedSourceImage ? undefined : dropRef,
-            handleDragOver: hasConnectedSourceImage ? undefined : handleDragOver,
-            handleDragLeave: hasConnectedSourceImage ? undefined : handleDragLeave,
-            handleDrop: hasConnectedSourceImage ? undefined : handleDrop,
-            handleClick: hasConnectedSourceImage ? undefined : handleClick,
+            category: "image-to-image"
           }}
           settingsProps={{
             quality,
@@ -154,13 +144,32 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
             handleSettingsChange,
           }}
           actionsProps={{
-            // Actions likely relate to the OUTPUT image
+            // Actions relate to the *output* image
             imageUrl: outputImageUrl,
           }}
-        />
-        
-        {/* Visual Mirror component to display mirrored content */}
-        <VisualMirror nodeId={id} />
+        >
+          {/* Add VisualMirrorImage inside BaseNode within NodeContent */}
+          {isSubmitting ? (
+            <div className="text-[9px] text-gray-400 p-2 text-center">Generating...</div>
+          ) : isGenerated ? (
+            <div className="relative w-full h-full">
+              <img 
+                src={outputImageUrl || "/sample-image.png"} 
+                alt="Generated content" 
+                className="object-cover w-full h-full" 
+              />
+            </div>
+          ) : (
+            <div className="visual-mirror-wrapper">
+              <VisualMirrorImage nodeId={id} />
+            </div>
+          )}
+
+          {/* Text content positioned OUTSIDE of NodeContent as a separate element */}
+          {!isSubmitting && !isGenerated && (
+            <VisualMirrorText nodeId={id} />
+          )}
+        </BaseNode>
       </div>
       
       {/* Image selector dialog remains outside BaseNode */}

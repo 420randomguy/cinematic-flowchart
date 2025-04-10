@@ -59,15 +59,15 @@ const TextInput = forwardRef<HTMLTextAreaElement, TextInputProps>(
     }
 
     return (
-      <div className={`border-t border-b border-gray-800/50 py-1.5 my-0.5 relative ${className}`}>
+      <div className={`relative ${className}`}>
         <div className="relative">
           <textarea
             ref={textareaRef || ref}
             value={text}
             onChange={handleTextChange}
-            className="w-full min-h-[60px] bg-black text-[9px] text-gray-300 p-1.5 rounded-sm resize-none focus:outline-none focus:ring-1 focus:ring-gray-700 overflow-hidden prevent-node-drag"
+            className="w-full min-h-[60px] bg-black text-[9px] text-yellow-200 text-input text-input-auto-height rounded-sm resize-none focus:outline-none focus:ring-1 focus:ring-gray-700 overflow-hidden prevent-node-drag"
             placeholder={placeholder}
-            style={{ height: "auto" }}
+            spellCheck="false"
             {...mergedInputProps}
           />
           <div className="absolute bottom-1 right-1 text-[8px] text-gray-500">

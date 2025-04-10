@@ -89,6 +89,8 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
         isDragging: false,
         isSubmitting: false,
         isGenerated: false,
+        // Set onContentChange to null to prevent NodeContent from rendering input
+        onContentChange: null,
       }}
     >
       <div className="px-2 py-0">

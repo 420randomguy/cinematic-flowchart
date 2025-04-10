@@ -1,6 +1,7 @@
 "use client"
 
-import type React from "react"
+import React from "react"
+import type { CSSProperties } from "react"
 
 import { memo, type ReactNode, useEffect, useRef, useCallback, useMemo } from "react"
 import { Position, useReactFlow } from "reactflow"
@@ -280,6 +281,14 @@ function BaseNodeComponent({
 
   const sourceHandleId = getSourceHandleId()
 
+  // Determine if children are provided
+  const hasChildren = React.Children.count(children) > 0
+
+  // Determine if NodeContent should be rendered
+  // Don't render NodeContent if children are provided AND no special props are passed to contentProps
+  const shouldRenderNodeContent = !hasChildren || 
+    Object.keys(contentProps).some(key => ['isSubmitting', 'isGenerated', 'outputImageUrl'].includes(key))
+
   return (
     <NodeWrapper id={id} type={nodeType} isNewNode={data.isNewNode} onClick={handleNodeClick} ref={nodeRef}>
       {/* Node header with type label and model selector */}
@@ -302,22 +311,24 @@ function BaseNodeComponent({
         </div>
       )}
 
-      {/* NodeContent - Pass ONLY necessary props explicitly */}
-      <NodeContent
-        data={data}
-        isSubmitting={isSubmitting}
-        isGenerated={isGenerated}
-        sourceNodeContent={data.sourceNodeContent}
-        sourceImageUrl={data.sourceImageUrl}
-        outputImageUrl={data.imageUrl}
-        isOutputNode={isOutputNode}
-        handleClick={contentProps.handleClick}
-        handleDragOver={contentProps.handleDragOver}
-        handleDragLeave={contentProps.handleDragLeave}
-        handleDrop={contentProps.handleDrop}
-        dropRef={contentProps.dropRef}
-        isDragging={contentProps.isDragging}
-      />
+      {/* NodeContent - Render only if shouldRenderNodeContent is true */}
+      {shouldRenderNodeContent && (
+        <NodeContent
+          data={data}
+          isSubmitting={isSubmitting}
+          isGenerated={isGenerated}
+          sourceNodeContent={data.sourceNodeContent}
+          sourceImageUrl={data.sourceImageUrl}
+          outputImageUrl={data.imageUrl}
+          isOutputNode={isOutputNode}
+          handleClick={contentProps.handleClick}
+          handleDragOver={contentProps.handleDragOver}
+          handleDragLeave={contentProps.handleDragLeave}
+          handleDrop={contentProps.handleDrop}
+          dropRef={contentProps.dropRef}
+          isDragging={contentProps.isDragging}
+        />
+      )}
 
       {/* Children (e.g., specific inputs/settings for derived nodes) */}
       {children}

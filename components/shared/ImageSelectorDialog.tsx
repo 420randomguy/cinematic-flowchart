@@ -3,7 +3,8 @@
 import type React from "react"
 import { memo } from "react"
 import { ImageIcon } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { createInteractiveProps } from "@/lib/utils/node-interaction"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 
@@ -33,6 +34,10 @@ function ImageSelectorDialogComponent({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-black border border-gray-800 p-4 max-w-md">
+        <VisuallyHidden>
+          <DialogTitle>Image Library</DialogTitle>
+        </VisuallyHidden>
+        
         <h3 className="text-sm font-medium text-white mb-3">Select an image</h3>
 
         {savedImages.length > 0 ? (
@@ -45,7 +50,17 @@ function ImageSelectorDialogComponent({
                   className="aspect-video bg-gray-900 rounded overflow-hidden cursor-pointer hover:ring-1 hover:ring-yellow-300/50 group relative"
                   {...{
                     ...interactiveProps,
-                    onClick: () => onSelectImage(img)
+                    onClick: (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("[ImageSelectorDialog] Image clicked, calling onSelectImage with:", img);
+                      // First close the dialog to prevent any interference
+                      onOpenChange(false);
+                      // Then select the image with a slight delay to ensure proper order
+                      setTimeout(() => {
+                        onSelectImage(img);
+                      }, 10);
+                    }
                   }}
                 >
                   <img

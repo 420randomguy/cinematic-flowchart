@@ -75,6 +75,12 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
 
   // Determine the image URL to *display* as the source, directly from props.data
   const sourceImageUrlToDisplay = data.sourceImageUrl || data.imageUrl || null
+  
+  // Debug log for image URL propagation
+  useEffect(() => {
+    console.log(`[ImageToImageNode:DEBUG] ${id} Source Image URL: "${sourceImageUrlToDisplay}" (from ${data.sourceImageUrl ? 'connection' : (data.imageUrl ? 'local upload' : 'none')})`);
+  }, [id, sourceImageUrlToDisplay, data.sourceImageUrl, data.imageUrl]);
+  
   // Determine the text content to display directly from props.data
   const textContentToDisplay = data.sourceNodeContent || data.content || ""
   // This node *outputs* an image, stored in data.outputImageUrl or data.imageUrl

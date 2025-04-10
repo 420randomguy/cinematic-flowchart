@@ -8,10 +8,6 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { Share } from "lucide-react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-// Remove imports for VirtualizedList and LazyLoad
-// Remove:
-// import { VirtualizedList } from "@/components/ui/VirtualizedList"
-// import { LazyLoad } from "@/components/ui/LazyLoad"
 import { createLazyComponent } from "@/lib/utils/code-splitting"
 
 // Lazy load the image viewer component
@@ -101,7 +97,7 @@ export default function AssetBoardPanel() {
   )
 
   // Improved drag start handler with better data transfer
-  const handleDragStart = useCallback((e: React.DragEvent, item: any) => {
+  const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, item: any) => {
     // Set the drag data with complete node information
     e.dataTransfer.setData(
       "application/reactflow",
@@ -155,7 +151,7 @@ export default function AssetBoardPanel() {
   const renderAssetItem = useCallback(
     (asset: any, index: number) => (
       // Replace with standard components
-      <div key={asset.id} className="relative group" draggable onDragStart={(e) => handleDragStart(e, asset)}>
+      <div key={asset.id} className="relative group" draggable onDragStart={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset)}>
         <div className="aspect-square bg-gray-900 rounded-sm overflow-hidden border border-gray-800">
           <img
             src={asset.url || "/placeholder.svg"}

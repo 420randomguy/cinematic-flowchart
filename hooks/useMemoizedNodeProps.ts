@@ -2,11 +2,11 @@
 
 import { useMemo, useCallback } from "react"
 import { useReactFlow } from "reactflow"
-import { useConnectionStore } from "@/store/useConnectionStore"
+import { useFlowchartStore } from "@/store/useFlowchartStore"
 
 // Create stable selectors outside the hook
 const updateNodeContentSelector = (state: any) => state.updateNodeContent
-const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
+const updateNodeImageSelector = (state: any) => state.updateNodeImage
 
 /**
  * Hook to provide memoized props and callbacks for node components
@@ -15,9 +15,9 @@ const updateNodeImageUrlSelector = (state: any) => state.updateNodeImageUrl
 export function useMemoizedNodeProps(id: string, data: any) {
   const { setNodes } = useReactFlow()
   
-  // Use the store with stable selectors
-  const updateNodeContent = useConnectionStore(updateNodeContentSelector)
-  const updateNodeImageUrl = useConnectionStore(updateNodeImageUrlSelector)
+  // Use the flowchart store with stable selectors
+  const updateNodeContent = useFlowchartStore(updateNodeContentSelector)
+  const updateNodeImage = useFlowchartStore(updateNodeImageSelector)
 
   // Memoize the update content function
   const updateContent = useCallback(
@@ -36,10 +36,10 @@ export function useMemoizedNodeProps(id: string, data: any) {
     (imageUrl: string) => {
       setNodes((nodes) => nodes.map((node) => (node.id === id ? { ...node, data: { ...node.data, imageUrl } } : node)))
 
-      // Update connected nodes that might use this image
-      updateNodeImageUrl(id, imageUrl)
+      // Update connected nodes using the correct store action
+      updateNodeImage(id, imageUrl)
     },
-    [id, setNodes, updateNodeImageUrl],
+    [id, setNodes, updateNodeImage],
   )
 
   // Memoize the update settings function

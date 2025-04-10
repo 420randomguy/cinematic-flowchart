@@ -47,8 +47,6 @@ export function useImageHandling({
   onImageUpload,
   onDragStateChange,
   initialImageUrl,
-  updateConnectedNodes = true,
-  updateNodeImageUrl,
   handleInputInteraction,
 }: UseImageHandlingOptions) {
   // State
@@ -61,7 +59,6 @@ export function useImageHandling({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Use the store with stable selectors
-  // Select the raw assets array
   const savedAssets = useImageLibraryStore(getSavedAssetsSelector)
   const addImage = useImageLibraryStore(getAddAssetSelector)
 
@@ -69,74 +66,67 @@ export function useImageHandling({
   const savedImages = useMemo(() => savedAssets.map((asset: SavedAsset) => asset.url), [savedAssets])
 
   // ReactFlow
-  const { setNodes } = useReactFlow()
+  const { setNodes, getEdges } = useReactFlow()
 
-  // Update node with image
-  const updateNodeWithImage = useCallback(
-    (imageUrl: string, file?: File) => {
-      // Update the node data
-      const updatedData = {
-        ...data,
-        imageUrl: imageUrl,
-        ...(file ? { imageFile: file } : {}),
-      }
+  // Central function to update state, call callbacks, BUT NOT dispatch event
+  const finalizeImageUpdate = useCallback((imageUrl: string, file?: File) => {
+    console.log("[useImageHandling] finalizeImageUpdate called with:", imageUrl);
+    
+    // 1. Update local hook state
+    setSelectedImage(imageUrl);
+    console.log("[useImageHandling] setSelectedImage called with:", imageUrl);
 
-      // Update the node in ReactFlow
-      setNodes((nodes) => nodes.map((node) => (node.id === id ? { ...node, data: updatedData } : node)))
+    // 2. Update the node data directly in React Flow state
+    setNodes((nodes) => {
+      console.log("[useImageHandling] Updating node in ReactFlow:", id);
+      return nodes.map((node) =>
+        node.id === id
+          ? { ...node, data: { ...node.data, imageUrl, ...(file && { imageFile: file }) } }
+          : node
+      );
+    });
 
-      // Update connected nodes if needed
-      if (updateConnectedNodes && updateNodeImageUrl) {
-        updateNodeImageUrl(id, imageUrl)
-      }
-    },
-    [data, id, setNodes, updateConnectedNodes, updateNodeImageUrl],
-  )
+    // 3. Find target nodes (Keep for potential store-based propagation if needed later)
+    const currentEdges = getEdges();
+    const targetNodeIds = currentEdges
+      .filter(edge => edge.source === id && edge.sourceHandle === 'output') // Use 'output' handle as defined for ImageNode source
+      .map(edge => edge.target);
+
+    // 4. Call the original callback passed from ImageNode (which now only calls the store's updateNodeImage)
+    if (onImageSelect) {
+      console.log("[useImageHandling] Calling onImageSelect with:", imageUrl);
+      onImageSelect(imageUrl); // This now triggers the store update for persistence
+    } else {
+      console.log("[useImageHandling] No onImageSelect callback provided");
+    }
+
+    // Also call onImageUpload if it was provided and a file was processed
+    if (file && onImageUpload) {
+      onImageUpload(file, imageUrl);
+    }
+
+  }, [id, setNodes, getEdges, onImageSelect, onImageUpload]);
 
   // Process image file (used by both drop and file input)
   const processImageFile = useCallback(
     (file: File) => {
-      if (!file) return
-
-      const reader = new FileReader()
-
+      if (!file) return;
+      const reader = new FileReader();
       reader.onload = () => {
         try {
-          const imageUrl = reader.result as string
-          if (!imageUrl) return
-
-          // Save the image to the library
-          addImage({
-            url: imageUrl,
-            type: "image",
-            title: "Uploaded Image",
-          })
-          setSelectedImage(imageUrl)
-
-          // Use the provided callback if available
-          if (onImageUpload) {
-            onImageUpload(file, imageUrl)
-            return
-          }
-
-          // Otherwise, update the node data directly
-          updateNodeWithImage(imageUrl, file)
-        } catch (error) {
-          console.error("Error processing image file:", error)
-        }
-      }
-
-      reader.onerror = () => {
-        console.error("Error reading file:", reader.error)
-      }
-
-      try {
-        reader.readAsDataURL(file)
-      } catch (error) {
-        console.error("Error reading file as data URL:", error)
-      }
+          const imageUrl = reader.result as string;
+          if (!imageUrl) return;
+          // Save to library (optional, keep if needed)
+           addImage({ url: imageUrl, type: "image", title: "Uploaded Image" }); // Assuming addImage is defined elsewhere
+          // Finalize the update
+          finalizeImageUpdate(imageUrl, file); // Use central function
+        } catch (error) { console.error("Error processing image file:", error); }
+      };
+      reader.onerror = () => { console.error("Error reading file:", reader.error); };
+      try { reader.readAsDataURL(file); } catch (error) { console.error("Error reading file as data URL:", error); }
     },
-    [addImage, onImageUpload, updateNodeWithImage],
-  )
+    [addImage, finalizeImageUpdate], // Updated dependencies
+  );
 
   // Enhanced drag over handler with state update
   const handleDragOver = useCallback(
@@ -163,26 +153,24 @@ export function useImageHandling({
   // Handle file drop
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
-      if (!e) return
+      if (!e) return;
 
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(false)
-      onDragStateChange?.(false)
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      onDragStateChange?.(false);
 
       try {
         if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-          const file = e.dataTransfer.files[0]
+          const file = e.dataTransfer.files[0];
           if (file && file.type && file.type.startsWith("image/")) {
-            processImageFile(file)
+            processImageFile(file); // Use the processing function
           }
         }
-      } catch (error) {
-        console.error("Error handling file drop:", error)
-      }
+      } catch (error) { console.error("Error handling file drop:", error); }
     },
-    [onDragStateChange, processImageFile],
-  )
+    [onDragStateChange, processImageFile], // processImageFile includes finalizeImageUpdate
+  );
 
   // Handle click to open image selector
   const handleClick = useCallback(() => {
@@ -206,59 +194,53 @@ export function useImageHandling({
   // Handle image selection from library
   const selectImage = useCallback(
     (imageUrl: string) => {
-      setSelectedImage(imageUrl)
+      console.log("[useImageHandling] selectImage called with:", imageUrl);
       
-      // Close dialog
-      setShowImageSelector(false)
+      // Finalize the update using the central function FIRST
+      console.log("[useImageHandling] About to call finalizeImageUpdate");
+      finalizeImageUpdate(imageUrl); // Use central function
       
-      // Update local data
-      if (data) {
-        data.imageUrl = imageUrl;
-      }
+      // Close dialog AFTER image update is started
+      setShowImageSelector(false);
       
-      // Notify parent via callback
-      if (onImageSelect) {
-        onImageSelect(imageUrl);
-      }
+      console.log("[useImageHandling] Image should be updated now");
+      handleInputInteraction?.(false); // Indicate interaction ended
     },
-    [data, setShowImageSelector, onImageSelect]
+    [setShowImageSelector, finalizeImageUpdate, handleInputInteraction] // Updated dependencies
   );
 
   // Handle file upload from input
   const handleFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
-        const file = e.target.files[0]
+        const file = e.target.files[0];
         if (file.type.startsWith("image/")) {
-          processImageFile(file)
+          processImageFile(file); // Use the processing function
         }
       }
-      setShowImageSelector(false)
-      handleInputInteraction?.(false)
-
-      // Reset the input value so the same file can be selected again
-      if (e.target) {
-        e.target.value = ""
-      }
+      setShowImageSelector(false);
+      handleInputInteraction?.(false);
+      if (e.target) { e.target.value = ""; }
     },
-    [processImageFile, handleInputInteraction],
-  )
+    [processImageFile, handleInputInteraction, setShowImageSelector], // processImageFile includes finalizeImageUpdate
+  );
 
-  // Update selected image when data.imageUrl changes
+  // Effect to update local state if initial data changes (e.g., undo/redo)
   useEffect(() => {
-    if (data.imageUrl && data.imageUrl !== selectedImage) {
-      setSelectedImage(data.imageUrl)
+    const currentImageUrl = data.imageUrl;
+    if (currentImageUrl && currentImageUrl !== selectedImage) {
+        // Update local state but DON'T trigger events/callbacks here
+        // This reflects external changes, not user actions within this node
+        setSelectedImage(currentImageUrl);
     }
-  }, [data.imageUrl, selectedImage])
+  }, [data.imageUrl, selectedImage]); // Only depend on external data change
 
   return {
     // State
     isDragging,
     showImageSelector,
     setShowImageSelector,
-    selectedImage,
-
-    // Refs
+    selectedImage, // Return the local state for potential display if needed
     dropRef,
     fileInputRef,
 
@@ -275,7 +257,8 @@ export function useImageHandling({
     selectImage,
     handleFileUpload,
     processImageFile,
-    updateNodeWithImage,
+    // updateNodeWithImage is now effectively replaced by finalizeImageUpdate internally
   }
 }
+
 

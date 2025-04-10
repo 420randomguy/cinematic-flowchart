@@ -10,7 +10,7 @@ interface NodeHandleProps {
   isConnectable?: boolean
   style?: React.CSSProperties
   className?: string
-  handleType?: "text" | "image" | "lora"
+  handleType?: "text" | "image" | "lora" | "video"
 }
 
 export function NodeHandle({

@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { devtools, persist } from "zustand/middleware"
 import { type Edge, type Node, applyEdgeChanges, applyNodeChanges, type Connection, addEdge } from "reactflow"
+import type { RefObject } from 'react'
 
 interface HistoryState {
   nodes: Node[]
@@ -14,6 +15,7 @@ interface FlowchartState {
   selectedNodeId: string | null
   isDragging: boolean
   isInteractingWithInput: boolean
+  canvasContainerRef: RefObject<HTMLDivElement> | null
 
   // History state (undo/redo)
   undoStack: HistoryState[]
@@ -72,6 +74,7 @@ interface FlowchartState {
   undo: () => void
   redo: () => void
   clearContextMenu: () => void
+  setCanvasContainerRef: (ref: RefObject<HTMLDivElement> | null) => void
 }
 
 export const useFlowchartStore = create<FlowchartState>()(
@@ -93,6 +96,7 @@ export const useFlowchartStore = create<FlowchartState>()(
         connectionStartHandleType: null,
         connectionStartHandleId: null,
         cropImage: null,
+        canvasContainerRef: null,
 
         // Data propagation functions
         propagateNodeData: (sourceNode, targetNode, targetHandle) => {
@@ -105,17 +109,11 @@ export const useFlowchartStore = create<FlowchartState>()(
           if (isImageSource && targetHandle === 'image') {
             // Replace existing image connection implicitly
             newData.sourceImageUrl = sourceNode.data?.imageUrl || null;
-            console.log(`[Store] Propagated sourceImageUrl from ${sourceNode.id} to ${targetNode.id}`);
             didUpdate = true;
-            // Clear text if replacing with image (optional)
-            // newData.sourceNodeContent = null;  
           } else if (isTextSource && targetHandle === 'text') {
             // Replace existing text connection implicitly
             newData.sourceNodeContent = sourceNode.data?.content || '';
-            console.log(`[Store] Propagated sourceNodeContent from ${sourceNode.id} to ${targetNode.id}`);
             didUpdate = true;
-            // Clear image if replacing with text (optional)
-            // newData.sourceImageUrl = null;
           }
 
           // Return updated node and a flag indicating if any updates were made
@@ -134,11 +132,9 @@ export const useFlowchartStore = create<FlowchartState>()(
 
           if (isImageSource && targetHandle === 'image') {
             newData.sourceImageUrl = null;
-            console.log(`[Store] Cleared sourceImageUrl on ${targetNode.id}`);
             didUpdate = true;
           } else if (isTextSource && targetHandle === 'text') {
             newData.sourceNodeContent = null;
-            console.log(`[Store] Cleared sourceNodeContent on ${targetNode.id}`);
             didUpdate = true;
           } else if (!sourceNodeType) {
             // If source node type is unknown, clear both potentially
@@ -283,7 +279,7 @@ export const useFlowchartStore = create<FlowchartState>()(
             
             // Then propagate to all target nodes
             const targetNodeIds = state.edges
-              .filter(edge => edge.source === nodeId && edge.targetHandle === 'text')
+              .filter(edge => edge.source === nodeId && edge.sourceHandle === 'text')
               .map(edge => edge.target);
               
             return {
@@ -302,8 +298,6 @@ export const useFlowchartStore = create<FlowchartState>()(
               })
             };
           });
-          
-          console.log(`[Store] Updated and propagated content for node ${nodeId}`);
         },
         
         updateNodeImage: (nodeId, imageUrl) => {
@@ -322,28 +316,30 @@ export const useFlowchartStore = create<FlowchartState>()(
             );
             
             // Then propagate to all target nodes
-            const targetNodeIds = state.edges
-              .filter(edge => edge.source === nodeId && edge.targetHandle === 'image')
-              .map(edge => edge.target);
+            // First, find all edges that start from our source node
+            const relevantEdges = state.edges.filter(edge => edge.source === nodeId && edge.sourceHandle === 'image');
+            
+            const targetNodeIds = relevantEdges.map(edge => edge.target);
+            
+            // Update the target nodes with the new image URL
+            const finalNodes = updatedNodes.map(node => {
+              if (targetNodeIds.includes(node.id)) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    sourceImageUrl: imageUrl,
+                    _lastUpdated: Date.now()
+                  }
+                };
+              }
+              return node;
+            });
               
             return {
-              nodes: updatedNodes.map(node => {
-                if (targetNodeIds.includes(node.id)) {
-                  return {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      sourceImageUrl: imageUrl,
-                      _lastUpdated: Date.now()
-                    }
-                  };
-                }
-                return node;
-              })
+              nodes: finalNodes
             };
           });
-          
-          console.log(`[Store] Updated and propagated image for node ${nodeId}`);
         },
 
         // Actions
@@ -446,9 +442,22 @@ export const useFlowchartStore = create<FlowchartState>()(
             const sourceNode = state.nodes.find(n => n.id === connection.source);
             const targetNodeIndex = state.nodes.findIndex(n => n.id === connection.target);
             let updatedNodes = [...state.nodes]; // Clone nodes array
+            let updatedEdges = [...state.edges]; // Clone edges array
 
             if (sourceNode && targetNodeIndex !== -1) {
               const targetNode = updatedNodes[targetNodeIndex];
+              
+              // Find and remove any existing edges of the same type to this target
+              const existingEdges = updatedEdges.filter(edge => 
+                edge.target === connection.target && 
+                edge.targetHandle === connection.targetHandle
+              );
+              
+              if (existingEdges.length > 0) {
+                // Remove existing edges
+                const edgeIdsToRemove = existingEdges.map(edge => edge.id);
+                updatedEdges = updatedEdges.filter(edge => !edgeIdsToRemove.includes(edge.id));
+              }
               
               const { targetNode: updatedTargetNode, didUpdate } = get().propagateNodeData(
                 sourceNode,
@@ -462,13 +471,13 @@ export const useFlowchartStore = create<FlowchartState>()(
             }
 
             // Add the new edge
-            const updatedEdges = addEdge(connection, state.edges);
+            updatedEdges = addEdge(connection, updatedEdges);
 
             return {
               edges: updatedEdges,
               nodes: updatedNodes, // Return nodes updated with propagated data
             };
-          })
+          });
         },
 
         setSelectedNodeId: (id) => set({ selectedNodeId: id }),
@@ -558,6 +567,8 @@ export const useFlowchartStore = create<FlowchartState>()(
         },
 
         clearContextMenu: () => set({ contextMenu: null }),
+
+        setCanvasContainerRef: (ref) => set({ canvasContainerRef: ref }),
       }),
       {
         name: "flowchart-storage",

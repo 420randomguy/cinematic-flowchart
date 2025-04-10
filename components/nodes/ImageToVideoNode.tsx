@@ -1,22 +1,20 @@
 "use client"
 
-import { memo, useCallback, useState, useEffect, useMemo } from "react"
+import { memo, useState, useCallback, useEffect } from "react"
 import type { NodeProps } from "reactflow"
 import type { VideoNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
+import { useMemoizedNodeProps } from "@/hooks/useMemoizedNodeProps"
 import { useNodeConnections } from "@/hooks/useNodeConnections"
-import { useImageHandling } from "@/hooks/useImageHandling"
-import ImageSelectorDialog from "@/components/shared/ImageSelectorDialog"
 import { useReactFlow } from "reactflow"
 
-// Create stable selector outside the component
-const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
-
 function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) {
-  // Use the store with stable selector
-  const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
+  const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
   
+  // Get ReactFlow utilities
+  const { getNodes, setNodes } = useReactFlow()
+
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
       setIsInteractingWithInput(isInteracting)
@@ -24,41 +22,16 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
     [setIsInteractingWithInput],
   )
 
-  // Use node connections hook to get connected content
-  const { textContent, imageUrl: connectedImageUrl, connectedImageNodes } = useNodeConnections({ id })
-
-  // Use image handling hook
-  const {
-    isDragging,
-    showImageSelector,
-    setShowImageSelector,
-    dropRef,
-    savedImages,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-    handleClick,
-    selectImage,
-    handleFileUpload,
-  } = useImageHandling({ id, data, handleInputInteraction })
-
-  // State for video generation, model selection, etc.
+  const { nodeProps } = useMemoizedNodeProps(id, data)
+  
+  // Add state for text-to-video generation
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGenerated, setIsGenerated] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(5)
   const [quality, setQuality] = useState(data.quality || 80)
   const [selectedModelId, setSelectedModelId] = useState(data.modelId || "wan-pro")
   const [modelSettings, setModelSettings] = useState(data.modelSettings || {})
-  const [seed, setSeed] = useState(data.seed || 42)
-
-  // Check if an image node is connected
-  const hasConnectedImageNode = connectedImageNodes.length > 0
-  
-  // Determine the image URL to use (connected or internal)
-  const displayImageUrl = useMemo(() => connectedImageUrl || data.imageUrl, [connectedImageUrl, data.imageUrl])
-
-  // Get ReactFlow utilities
-  const { getNodes, setNodes } = useReactFlow()
+  const [seed] = useState(data.seed || Math.floor(Math.random() * 1000000000).toString())
 
   // Add handlers
   const handleModelChange = useCallback((modelId: string) => {
@@ -74,12 +47,16 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
       setIsSubmitting(false)
       setTimeRemaining(5)
     } else if (isGenerated) {
+      // Handle regeneration
       setIsSubmitting(true)
       setIsGenerated(false)
+
+      // Simulate generation process
       let time = 5
       const interval = setInterval(() => {
         time--
         setTimeRemaining(time)
+
         if (time <= 0) {
           clearInterval(interval)
           setIsSubmitting(false)
@@ -87,11 +64,15 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
         }
       }, 1000)
     } else {
+      // Handle initial generation
       setIsSubmitting(true)
+
+      // Simulate generation process
       let time = 5
       const interval = setInterval(() => {
         time--
         setTimeRemaining(time)
+
         if (time <= 0) {
           clearInterval(interval)
           setIsSubmitting(false)
@@ -101,66 +82,59 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
     }
   }, [isSubmitting, isGenerated])
 
-  // Determine if we should show the video in NodeContent/Actions
-  const showVideo = isGenerated || data.showVideo || false
+  // Determine the content to display directly from props.data
+  const textToDisplay = data.sourceNodeContent || data.content || ""
+  const imageUrlToDisplay = data.sourceImageUrl || data.imageUrl || null
 
-  // Define target handles
-  const targetHandleIds = useMemo(() => ["image", "text", "lora"], [])
+  // Log the final content being used for rendering this cycle
+  console.log(`[ImageToVideoNode:RENDER] ${id} Rendering with image: "${imageUrlToDisplay}", text: "${textToDisplay}" (from props.data)`)
+
+  // Determine validity based on the final display values
+  const hasValidImages = !!imageUrlToDisplay
+  const hasValidText = !!textToDisplay
 
   return (
-    <>
-      <BaseNode
-        id={id}
-        data={data}
-        nodeType="image-to-video"
-        title={data.title || "IMAGE-TO-VIDEO"}
-        showSourceHandle={true} // Video nodes likely have a video/data output
-        showTargetHandle={true}
-        targetHandleIds={targetHandleIds}
-        isConnectable={isConnectable}
-        modelId={selectedModelId}
-        onModelChange={handleModelChange}
-        contentProps={{
-          imageUrl: connectedImageUrl,
-          fallbackImageUrl: data.imageUrl,
-          textContent: textContent,
-          category: "image-to-video",
-          isSubmitting,
-          isGenerated,
-          showVideo,
-          timeRemaining,
-          handleSubmitToggle,
-          isDragging: hasConnectedImageNode ? undefined : isDragging,
-          dropRef: hasConnectedImageNode ? undefined : dropRef,
-          handleDragOver: hasConnectedImageNode ? undefined : handleDragOver,
-          handleDragLeave: hasConnectedImageNode ? undefined : handleDragLeave,
-          handleDrop: hasConnectedImageNode ? undefined : handleDrop,
-          handleClick: hasConnectedImageNode ? undefined : handleClick,
-        }}
-        settingsProps={{
-          quality,
-          setQuality,
-          seed,
-          selectedModelId,
-          modelSettings,
-          handleSettingsChange,
-        }}
-        actionsProps={{
-          imageUrl: displayImageUrl,
-          showVideo,
-        }}
-      />
-
-      {/* Image selector dialog remains outside BaseNode */}
-      <ImageSelectorDialog
-        open={showImageSelector}
-        onOpenChange={setShowImageSelector}
-        onSelectImage={selectImage}
-        onFileUpload={handleFileUpload}
-        handleInputInteraction={handleInputInteraction}
-        savedImages={savedImages}
-      />
-    </>
+    <BaseNode
+      id={id}
+      data={{
+        ...data,
+        // Pass the store-managed source data down
+        sourceImageUrl: imageUrlToDisplay,
+        sourceNodeContent: textToDisplay,
+        // Pass the *output* video URL (if generated)
+        // videoUrl: data.videoUrl // Assuming VideoNodeData has videoUrl for output
+      }}
+      nodeType="image-to-video"
+      title={nodeProps.title || "IMAGE-TO-VIDEO"}
+      showSourceHandle={true}
+      showTargetHandle={true}
+      targetHandleIds={["text", "image"]}
+      isConnectable={isConnectable}
+      modelId={selectedModelId}
+      onModelChange={handleModelChange}
+      contentProps={{
+        imageUrl: imageUrlToDisplay,
+        showImage: hasValidImages,
+        textContent: textToDisplay,
+        category: "image-to-video",
+        isSubmitting,
+        isGenerated,
+        timeRemaining,
+        handleSubmitToggle,
+      }}
+      settingsProps={{
+        quality,
+        setQuality,
+        seed,
+        selectedModelId,
+        modelSettings,
+        handleModelChange,
+        handleSettingsChange,
+      }}
+      actionsProps={{
+        showVideo: data.showVideo || false,
+      }}
+    />
   )
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useState } from "react"
+import { memo, useCallback, useState, useEffect } from "react"
 import type { NodeProps } from "reactflow"
 import type { VideoNodeData } from "@/types"
 import { BaseNode } from "@/components/nodes/BaseNode"
@@ -18,8 +18,7 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
   )
 
   const { nodeProps } = useMemoizedNodeProps(id, data)
-  const { textContent, refreshContent } = useNodeConnections({ id })
-
+  
   // Add state for text-to-video generation
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGenerated, setIsGenerated] = useState(false)
@@ -30,11 +29,11 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
   const [seed] = useState(data.seed || Math.floor(Math.random() * 1000000000).toString())
 
   // Add handlers
-  const handleModelChange = useCallback((modelId) => {
+  const handleModelChange = useCallback((modelId: string) => {
     setSelectedModelId(modelId)
   }, [])
 
-  const handleSettingsChange = useCallback((settings) => {
+  const handleSettingsChange = useCallback((settings: Record<string, any>) => {
     setModelSettings(settings)
   }, [])
 
@@ -78,24 +77,39 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
     }
   }, [isSubmitting, isGenerated])
 
+  // Determine the text to display directly from props.data
+  const textToDisplay = data.sourceNodeContent || data.content || ""
+
+  // Log the final text being used for rendering this cycle
+  console.log(`[TextToVideoNode:RENDER] ${id} Rendering with text: "${textToDisplay}" (from props.data)`)
+
   return (
     <BaseNode
       id={id}
-      data={data}
+      data={{
+        ...data,
+        // Pass the store-managed source content down to BaseNode
+        sourceNodeContent: textToDisplay,
+        // This node primarily uses text input, sourceImageUrl might be irrelevant unless connected?
+        // sourceImageUrl: data.sourceImageUrl // Keep if Image handle is possible
+      }}
       nodeType="text-to-video"
       title={nodeProps.title || "TEXT-TO-VIDEO"}
       showSourceHandle={true}
       showTargetHandle={true}
-      targetHandleIds={["text", "lora"]}
+      targetHandleIds={["text"]}
       isConnectable={isConnectable}
       modelId={selectedModelId}
       onModelChange={handleModelChange}
       contentProps={{
         showVideo: data.showVideo || false,
-        textContent: textContent,
+        // Pass text down for NodeContent
+        textContent: textToDisplay,
         category: "text-to-video",
         isSubmitting,
         isGenerated,
+        timeRemaining,
+        handleSubmitToggle,
       }}
       settingsProps={{
         quality,

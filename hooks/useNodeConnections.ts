@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useReactFlow } from "reactflow"
-import { useConnectionStore } from "@/store/useConnectionStore"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 
 // Create stable selectors for the store

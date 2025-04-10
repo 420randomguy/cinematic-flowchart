@@ -81,7 +81,7 @@ body {
 /* Update the node styling to add slightly rounded edges */
 .react-flow__node {
   @apply shadow-none;
-  border-radius: 4px; /* Add slight rounding to all nodes */
+  border-radius: 12px; /* Increased from 4px to 12px (3x more rounded) */
 }
 
 /* Add these styles to ensure handles are positioned correctly */

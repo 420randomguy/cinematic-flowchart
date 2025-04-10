@@ -261,7 +261,7 @@ function BaseNodeComponent({
   const getSourceHandleType = () => {
     if (nodeType === "text") return "text"
     if (nodeType === "image" || nodeType === "text-to-image" || nodeType === "image-to-image") return "image"
-    if (nodeType === "url") return "lora"
+    if (nodeType === "text-to-video" || nodeType === "image-to-video") return "video"
     return undefined
   }
 
@@ -270,7 +270,15 @@ function BaseNodeComponent({
     // Default behavior for submit button if no handler is provided
   }, [])
 
-  const sourceHandleId = "output"
+  // Get the correct source handle ID based on node type
+  const getSourceHandleId = () => {
+    if (nodeType === "text") return "text"
+    if (nodeType === "image" || nodeType === "text-to-image" || nodeType === "image-to-image") return "image"
+    if (nodeType === "text-to-video" || nodeType === "image-to-video") return "video"
+    return "output"
+  }
+
+  const sourceHandleId = getSourceHandleId()
 
   return (
     <NodeWrapper id={id} type={nodeType} isNewNode={data.isNewNode} onClick={handleNodeClick} ref={nodeRef}>
@@ -302,6 +310,13 @@ function BaseNodeComponent({
         sourceNodeContent={data.sourceNodeContent}
         sourceImageUrl={data.sourceImageUrl}
         outputImageUrl={data.imageUrl}
+        isOutputNode={isOutputNode}
+        handleClick={contentProps.handleClick}
+        handleDragOver={contentProps.handleDragOver}
+        handleDragLeave={contentProps.handleDragLeave}
+        handleDrop={contentProps.handleDrop}
+        dropRef={contentProps.dropRef}
+        isDragging={contentProps.isDragging}
       />
 
       {/* Debug output - temporary for troubleshooting */}

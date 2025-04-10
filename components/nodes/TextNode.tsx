@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, useState, useCallback, useEffect, useMemo } from "react"
-import { BaseNodeContainer } from "@/components/core/BaseNodeContainer"
+import { BaseNode } from "@/components/nodes/BaseNode"
 import { NodeHeaderSection } from "@/components/nodes/sections/NodeHeaderSection"
 import { InputSection } from "@/components/nodes/sections/InputSection"
 import { TextInput } from "@/components/ui/TextInput"
@@ -66,23 +66,35 @@ function TextNode({ data, isConnectable, id }: NodeProps<TextNodeData>) {
   }, [data.content, promptText])
 
   return (
-    <BaseNodeContainer
+    <BaseNode
       id={id}
-      data={data}
+      data={{
+        ...data,
+        content: promptText,  // Ensure content is passed through data
+      }}
       nodeType="text"
+      title={data.title || "TEXT"}
+      showSourceHandle={true}
+      showTargetHandle={false}
       isConnectable={isConnectable}
+      contentProps={{
+        textContent: promptText,
+        isDragging: false,
+        isSubmitting: false,
+        isGenerated: false,
+      }}
     >
-      <NodeHeaderSection title={data.title || "PROMPT TITLE"} type="text" />
+      <div className="px-2 py-1">
+        <div className="flex items-center gap-1 text-[8px] text-gray-500 mb-1">
+          <Zap className="h-2.5 w-2.5 text-yellow-600/70" />
+          <span className="tracking-wide">xai-org driven</span>
+        </div>
 
-      <div className="flex items-center gap-1 text-[8px] text-gray-500 mb-2">
-        <Zap className="h-2.5 w-2.5 text-yellow-600/70" />
-        <span className="tracking-wide">xai-org driven</span>
+        <InputSection>
+          <TextInput value={promptText} onChange={handleTextChange} maxChars={4000} />
+        </InputSection>
       </div>
-
-      <InputSection>
-        <TextInput value={promptText} onChange={handleTextChange} maxChars={4000} />
-      </InputSection>
-    </BaseNodeContainer>
+    </BaseNode>
   )
 }
 

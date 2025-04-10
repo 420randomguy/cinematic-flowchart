@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { Bug, X, Database, Trash2, RefreshCw, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useFlowchartStore } from "@/store/useFlowchartStore"
+import type { Node } from "reactflow"
 
 type ConnectionStatus = "disconnected" | "connecting" | "connected"
 
@@ -19,6 +21,9 @@ export default function DebugPanel() {
     falAi: "disconnected",
   })
   const [isClearing, setIsClearing] = useState(false)
+  
+  // Get nodes from store
+  const nodes = useFlowchartStore(state => state.nodes)
 
   // Simulate checking API connections
   useEffect(() => {
@@ -83,6 +88,12 @@ export default function DebugPanel() {
       default:
         return "bg-red-500"
     }
+  }
+
+  // Add the Text Content Debug section
+  const getNodesWithSourceData = () => {
+    // Filter nodes that have either sourceNodeContent OR sourceImageUrl
+    return nodes.filter((n: Node) => n.data?.sourceNodeContent || n.data?.sourceImageUrl)
   }
 
   return (
@@ -181,6 +192,31 @@ export default function DebugPanel() {
                 </>
               )}
             </Button>
+          </div>
+
+          {/* Add a section to show text content propagation debug info */}
+          <div className="mt-4">
+            <h3 className="text-[11px] font-semibold mb-2 text-gray-300">Source Data Debug</h3>
+            <div className="space-y-2">
+              {getNodesWithSourceData().map((node: Node) => (
+                <div key={node.id} className="text-[9px] border border-gray-800 p-2 rounded-sm">
+                  <div className="font-semibold text-gray-400">Node: {node.id} ({node.type})</div>
+                  {node.data.sourceNodeContent && (
+                    <div className="text-green-400 break-words mt-1">
+                      Content: {node.data.sourceNodeContent}
+                    </div>
+                  )}
+                  {node.data.sourceImageUrl && (
+                    <div className="text-blue-400 break-words mt-1">
+                      Image URL: <span className="italic text-blue-500">{node.data.sourceImageUrl.substring(0, 30)}...</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {getNodesWithSourceData().length === 0 && (
+                <div className="text-[9px] text-gray-500">No nodes with source data found</div>
+              )}
+            </div>
           </div>
         </div>
       )}

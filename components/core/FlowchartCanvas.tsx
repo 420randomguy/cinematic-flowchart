@@ -19,6 +19,7 @@ import ReactFlow, {
   SelectionMode,
   ConnectionMode,
   type NodeDragHandler,
+  addEdge,
 } from "reactflow"
 import "reactflow/dist/style.css"
 
@@ -35,9 +36,8 @@ import ElementReferencePanel from "@/components/ui/element-reference-panel"
 // Import stores
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useImageLibraryStore } from "@/store/useImageLibraryStore"
-import { useConnectionStore } from "@/store/useConnectionStore"
 
-// Import node types
+// Import node types - import at module level, outside any component
 import { nodeTypes, preloadAllNodeTypes } from "@/lib/utils/dynamic-node-types"
 
 /**
@@ -78,15 +78,12 @@ function FlowchartCanvasInner() {
   // Add asset function from the image library store
   const { addAsset } = useImageLibraryStore()
 
-  // Get the connection store's setCurrentNodesAndEdges function
-  const { setCurrentNodesAndEdges } = useConnectionStore()
-
   // Refs
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   const reactFlowInstanceRef = useRef<any>(null)
 
   // ReactFlow hooks
-  const { project, fitView, getNode, getNodes, getEdges, setEdges } = useReactFlow()
+  const { project: screenToFlowPosition, fitView, getNode, getNodes, getEdges, setEdges } = useReactFlow()
 
   // Track mounted state
   const isMountedRef = useRef(false)
@@ -96,14 +93,6 @@ function FlowchartCanvasInner() {
       isMountedRef.current = false
     }
   }, [])
-
-  // Initialize connection lookup when nodes or edges change
-  useEffect(() => {
-    setCurrentNodesAndEdges(nodes, edges)
-  }, [nodes, edges, setCurrentNodesAndEdges])
-
-  // Memoize nodeTypes to prevent recreation on each render
-  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
   /**
    * Determine the appropriate target handle based on source and target node types
@@ -131,122 +120,61 @@ function FlowchartCanvasInner() {
   }, [])
 
   /**
+   * Get the correct source handle for a node type
+   */
+  const getSourceHandle = useCallback((nodeType: string | undefined): string => {
+    // Handle undefined case
+    if (!nodeType) return "output";
+    
+    // Match the handle IDs defined in node-model.ts getSourceHandle function
+    if (nodeType === "text") return "text"
+    if (nodeType === "image" || nodeType === "text-to-image" || nodeType === "image-to-image") return "image"
+    if (nodeType === "text-to-video" || nodeType === "image-to-video") return "video"
+    
+    // Default
+    return "output"
+  }, [])
+
+  /**
    * Handle connection between nodes
    */
   const handleConnect = useCallback(
-    (params: Connection) => {
-      // Validate that we have the required parameters
-      if (!params || !params.source || !params.target) {
-        console.error("Invalid connection parameters:", params)
-        return
-      }
-
+    (connection: Connection) => {
       // Get the source and target nodes
-      const sourceNode = getNode(params.source)
-      const targetNode = getNode(params.target)
-
-      if (!sourceNode || !targetNode) {
-        console.error("Source or target node not found")
-        return
-      }
-
-      // Step 1: Check if the connection is valid at the node type level
-      if (
-        !isValidConnection(sourceNode.type as any, targetNode.type as any, params.sourceHandle, params.targetHandle)
-      ) {
-        console.log("Invalid connection between", sourceNode.type, "and", targetNode.type)
-        return
-      }
-
-      // Save current state before adding a connection
-      saveState()
-
-      // Step 2: Determine the definitive target handle ID.
-      // Prioritize the handle ID directly from params (usually from click-to-connect).
-      // Fall back to getTargetHandle (usually from drag-to-connect via handleConnectEnd).
-      let definitiveTargetHandleId = params.targetHandle;
-      if (!definitiveTargetHandleId) {
-        console.log("[handleConnect] params.targetHandle missing, trying getTargetHandle...")
-        definitiveTargetHandleId = getTargetHandle(sourceNode, targetNode) ?? null;
-      }
-
-      // If we still don't have a handle ID, we cannot proceed reliably.
-      if (!definitiveTargetHandleId) {
-        console.error("[handleConnect] Could not determine target handle ID.", params);
-        return
-      }
-
-      // Step 3: Find ALL existing edges connecting from the SAME SOURCE TYPE to this target node
-      const existingEdges = getEdges().filter((edge) => {
-        if (edge.target !== params.target) return false; // Must connect to the same target node
-        const existingSourceNode = getNode(edge.source);
-        // Check if the existing source node's type matches the new source node's type
-        return existingSourceNode?.type === sourceNode.type;
-      })
-
-      // If there are existing connections of the same source type, remove them ALL first
-      let edgesToRemoveIds: string[] = [];
-      if (existingEdges.length > 0) {
-        console.log(`[handleConnect] Replacing ${existingEdges.length} existing connection(s) of type ${sourceNode.type} to ${params.target}`)
-        edgesToRemoveIds = existingEdges.map(edge => edge.id);
-        // DO NOT call onEdgesChange here anymore
-      }
-
-      // Create a unique edge ID
-      const edgeId = `e${params.source}-${params.target}-${Date.now()}`
-
-      // Create the new edge definition
-      const newEdge = {
-        id: edgeId,
-        source: params.source!,
-        sourceHandle: params.sourceHandle,
-        target: params.target!,
-        targetHandle: definitiveTargetHandleId,
-        type: "smoothstep",
-        animated: true,
-        style: { stroke: "#444", strokeWidth: 1 },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          width: 20,
-          height: 20,
-          color: "#444",
-        },
-      };
-
-      // Atomically remove old edges and add the new one
-      setEdges((currentEdges: Edge[]) => {
-        // Filter out edges marked for removal
-        const filteredEdges = currentEdges.filter(edge => !edgesToRemoveIds.includes(edge.id));
-        // Add the new edge
-        return [...filteredEdges, newEdge];
-      });
-
-      // Propagate data from source to target
-      if (sourceNode && targetNode) {
-        console.log(`Connection created from ${sourceNode.type} to ${targetNode.type}`)
-
-        // For image nodes, potentially update the store if needed for other reasons (e.g., saving state)
-        if (
-          (sourceNode.type === "image" ||
-            sourceNode.type === "text-to-image" ||
-            sourceNode.type === "image-to-image") &&
-          sourceNode.data?.imageUrl
+      const sourceNode = getNodes().find(n => n.id === connection.source);
+      const targetNode = getNodes().find(n => n.id === connection.target);
+      
+      if (!sourceNode || !targetNode) return;
+      
+      // Set the correct sourceHandle if missing
+      if (!connection.sourceHandle) {
+        if (sourceNode.type === "text") {
+          connection.sourceHandle = "text";
+        } else if (
+          sourceNode.type === "image" || 
+          sourceNode.type === "text-to-image" || 
+          sourceNode.type === "image-to-image"
         ) {
-          console.log(`Propagating image URL from ${params.source} to ${params.target}:`, sourceNode.data.imageUrl)
-
-          // Update the connection store (Keep this if store state is used elsewhere)
-          useConnectionStore.getState().updateNodeImageUrl(params.source, sourceNode.data.imageUrl)
+          connection.sourceHandle = "image";
+        } else if (
+          sourceNode.type === "text-to-video" || 
+          sourceNode.type === "image-to-video"
+        ) {
+          connection.sourceHandle = "video";
+        } else {
+          connection.sourceHandle = "output"; // Default fallback
         }
-
-        // For text nodes, potentially update the store if needed for other reasons
-        if (sourceNode.type === "text" && sourceNode.data?.content) {
-          console.log(`Propagating text content from ${params.source} to ${params.target}:`, sourceNode.data.content)
-          // Store update for text content if needed
-        }
+        console.log(`[FlowchartCanvas] Assigned sourceHandle=${connection.sourceHandle} for source node type ${sourceNode.type}`);
       }
+      
+      // Debug connection details
+      console.log(`[FlowchartCanvas] Creating edge with sourceHandle=${connection.sourceHandle}, targetHandle=${connection.targetHandle}`);
+      
+      // Use the store's onConnect method
+      useFlowchartStore.getState().onConnect(connection);
     },
-    [getNode, getTargetHandle, getEdges, setEdges, saveState]
-  )
+    [getNodes]
+  );
 
   /**
    * Handle connection start for showing context menu when dragging to empty canvas
@@ -342,10 +270,13 @@ function FlowchartCanvasInner() {
       const targetHandleId = getTargetHandle(sourceNode, targetNode)
       if (!targetHandleId) return
 
+      // Ensure we have the correct source handle ID
+      const sourceHandleId = connectionStartHandleId || getSourceHandle(sourceNode.type);
+
       // Create the connection
       const connection: Connection = {
         source: connectionStartNodeId,
-        sourceHandle: connectionStartHandleId,
+        sourceHandle: sourceHandleId,
         target: targetNodeId,
         targetHandle: targetHandleId,
       }
@@ -364,11 +295,12 @@ function FlowchartCanvasInner() {
       connectionStartHandleId,
       getNode,
       getTargetHandle,
+      getSourceHandle,
       handleConnect,
       setConnectionStartNodeId,
       setConnectionStartHandleType,
       setConnectionStartHandleId,
-    ],
+    ]
   )
 
   /**
@@ -438,8 +370,8 @@ function FlowchartCanvasInner() {
       const targetIsPane = (event.target as Element).classList.contains('react-flow__pane');
 
       if (targetIsPane && canvasWrapperRef.current) {
-        const bounds = canvasWrapperRef.current.getBoundingClientRect();
-        setContextMenu({ x: event.clientX - bounds.left, y: event.clientY - bounds.top });
+        // Store the raw client coordinates
+        setContextMenu({ x: event.clientX, y: event.clientY });
       } else {
         setContextMenu(null); // Hide menu if clicking on node/edge
       }
@@ -564,7 +496,7 @@ function FlowchartCanvasInner() {
               const newNode = {
                 id,
                 type: "image",
-                position: project(position),
+                position,
                 data: nodeData,
               }
 
@@ -579,7 +511,7 @@ function FlowchartCanvasInner() {
         }
       }
     },
-    [project, saveState, addAsset, setNodes],
+    [screenToFlowPosition, saveState, addAsset, setNodes],
   )
 
   /**
@@ -613,7 +545,7 @@ function FlowchartCanvasInner() {
       const id = `${clipboard.type}_${Date.now()}`
 
       // Get the current viewport center
-      const { x, y } = project({
+      const { x, y } = screenToFlowPosition({
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
       })
@@ -637,13 +569,15 @@ function FlowchartCanvasInner() {
       // Add the node to the flow
       setNodes((nodes) => [...nodes, newNode])
     }
-  }, [project, saveState, setNodes, clipboard])
+  }, [screenToFlowPosition, saveState, setNodes, clipboard])
 
-  // Add this effect to preload node types when the component mounts
+  // Memoize nodeTypes import to prevent recreating it on each render
+  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+  
+  // Preload node types when the component mounts
   useEffect(() => {
-    // Preload all node types when the canvas mounts
-    preloadAllNodeTypes()
-  }, [])
+    preloadAllNodeTypes();
+  }, []);
 
   // Global event listener for content propagation
   useEffect(() => {
@@ -771,7 +705,7 @@ function FlowchartCanvasInner() {
                   if (!canvasBounds) return
 
                   // Convert screen coordinates to canvas coordinates
-                  const position = project({
+                  const position = screenToFlowPosition({
                     x: contextMenu.x - canvasBounds.left,
                     y: contextMenu.y - canvasBounds.top,
                   })

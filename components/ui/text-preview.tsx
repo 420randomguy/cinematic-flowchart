@@ -10,6 +10,7 @@ interface TextPreviewProps {
   showIfEmpty?: boolean
   emptyText?: string
   isConnected?: boolean
+  showFullText?: boolean
 }
 
 function TextPreviewComponent({
@@ -20,6 +21,7 @@ function TextPreviewComponent({
   showIfEmpty = false,
   emptyText = "Connect text node",
   isConnected = false,
+  showFullText = false,
 }: TextPreviewProps) {
   // State to track previous text for change detection
   const [prevText, setPrevText] = useState(text)
@@ -58,13 +60,18 @@ function TextPreviewComponent({
   }, [text, prevText])
 
   // Determine if there's text content
-  const hasText = !!text
+  const hasText = !!text && text.trim().length > 0
 
   // Always show for output nodes, even if empty
   if (!hasText && !showIfEmpty) return null
 
-  // Truncate text if needed
-  const displayText = hasText ? (text!.length > maxLength ? `${text!.substring(0, maxLength)}...` : text) : emptyText
+  // Log for debugging
+  console.log(`[TextPreview] text:"${text}", hasText:${hasText}, showIfEmpty:${showIfEmpty}, emptyText:"${emptyText}"`)
+
+  // Truncate text if needed, unless showFullText is true
+  const displayText = hasText 
+    ? (showFullText ? text : (text!.length > maxLength ? `${text!.substring(0, maxLength)}...` : text))
+    : emptyText
 
   // Determine styling based on connection status and content
   const bgColor = hasText ? "bg-black/40" : "bg-black/20"
@@ -80,7 +87,7 @@ function TextPreviewComponent({
       data-has-text={hasText.toString()}
       data-node-id={nodeId}
     >
-      <p className={`text-[9px] font-mono ${textColor} leading-relaxed ${hasText ? "font-semibold" : ""}`}>
+      <p className={`text-[9px] font-mono ${textColor} leading-relaxed ${hasText ? "font-semibold" : ""} break-words`}>
         {hasText && <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-1.5 align-middle"></span>}
         {displayText}
       </p>

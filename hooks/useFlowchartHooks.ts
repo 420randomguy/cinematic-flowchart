@@ -245,8 +245,7 @@ export function useNodeState({
         const targetNode = getNodes().find((node) => node.id === edge.target)
         if (!targetNode) return
 
-        // Force multiple updates to ensure the content propagates
-        // First immediate update
+        // Update target node with content
         setNodes((nodes) =>
           nodes.map((node) =>
             node.id === edge.target
@@ -261,24 +260,6 @@ export function useNodeState({
               : node,
           ),
         )
-
-        // Second update with delay
-        setTimeout(() => {
-          setNodes((nodes) =>
-            nodes.map((node) =>
-              node.id === edge.target
-                ? {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      sourceNodeContent: content,
-                      _lastUpdated: Date.now() + 1,
-                    },
-                  }
-                : node,
-            ),
-          )
-        }, 50)
       })
     },
     [id, getEdges, getNodes, setNodes],

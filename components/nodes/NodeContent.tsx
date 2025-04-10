@@ -16,6 +16,7 @@ interface NodeContentProps {
   outputImageUrl?: string | null
   sourceNodeContent?: string | null
   isDragging?: boolean
+  isOutputNode?: boolean
   dropRef?: React.RefObject<HTMLDivElement>
   handleDragOver?: (e: React.DragEvent<HTMLDivElement>) => void
   handleDragLeave?: (e: React.DragEvent<HTMLDivElement>) => void
@@ -37,6 +38,7 @@ function NodeContentComponent({
   outputImageUrl,
   sourceNodeContent,
   isDragging = false,
+  isOutputNode,
   dropRef,
   handleDragOver,
   handleDragLeave,
@@ -57,12 +59,27 @@ function NodeContentComponent({
     () => data?.category === "image-to-video" || data?.category === "text-to-video",
     [data?.category],
   );
+  
+  // Use the isOutputNode prop if provided, otherwise compute it
+  const isOutputNodeType = isOutputNode !== undefined ? isOutputNode : useMemo(
+    () => data?.category?.includes("-to-"),
+    [data?.category],
+  );
 
   // Determine if we have source preview data
   const hasSourcePreviewData = !!sourceNodeContent || !!sourceImageUrl;
 
   // *** Centralized Display Logic v2 ***
   const renderContent = () => {
+    // Debug log for image rendering
+    console.log(`[NodeContent] Rendering node with:`, {
+      isImageUploadNode,
+      outputImageUrl,
+      dataImageUrl: data?.imageUrl,
+      sourceImageUrl,
+      category: data?.category
+    });
+    
     if (isSubmitting) {
       return <div className="text-[9px] text-gray-400 p-2 text-center">Generating...</div>;
     }
@@ -74,20 +91,41 @@ function NodeContentComponent({
       }
     }
     if (sourceImageUrl) {
-      return <img src={sourceImageUrl} alt="Source Preview" className="object-contain w-full h-auto max-h-[140px]" />;
-    }
-    if (sourceNodeContent) {
-      console.log(`[NodeContent DEBUG ${data?.id}] Rendering: Source Text Preview (Simplified)`);
-      // Removed non-standard JSX and made sure the div is visible with stronger styling
       return (
-        <div className="block w-full p-2 text-green-500 text-xs font-mono break-words text-center bg-black/30 border border-green-900/30">
-          {sourceNodeContent}
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2 relative">
+          <img src={sourceImageUrl} alt="Source Preview" className="object-contain max-w-full max-h-[120px]" />
+          {/* Add clickable area if handleClick is provided */}
+          {handleClick && (
+            <div 
+              className="absolute top-1/4 left-1/4 w-1/2 h-1/2 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event from bubbling to node drag
+                handleClick();
+              }}
+            />
+          )}
         </div>
       );
     }
     if (isImageUploadNode) {
-      if (outputImageUrl) {
-         return <img src={outputImageUrl} alt="Node Image" className="object-cover w-full h-full" />;
+      if (outputImageUrl || data?.imageUrl) {
+         // Use outputImageUrl or data.imageUrl, preferring outputImageUrl if both exist
+         const displayImageUrl = outputImageUrl || data?.imageUrl;
+         return (
+           <div className="relative w-full h-full">
+             <img src={displayImageUrl} alt="Node Image" className="object-cover w-full h-full" />
+             {/* Add an overlay div that creates a 50% central clickable area */}
+             {handleClick && (
+               <div 
+                 className="absolute top-1/4 left-1/4 w-1/2 h-1/2 cursor-pointer"
+                 onClick={(e) => {
+                   e.stopPropagation(); // Prevent event from bubbling to node drag
+                   handleClick();
+                 }}
+               />
+             )}
+           </div>
+         );
       } else {
          return (
            <div 
@@ -107,11 +145,32 @@ function NodeContentComponent({
       }
     } else {
       return (
-        <div className="text-[9px] text-gray-400 text-center p-2">
-           {isVideoOutputNode ? "Video input needed" : "Text input needed"}
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2">
+           <div className="text-[9px] text-gray-400 text-center">
+             {isVideoOutputNode ? "Video input needed" : "Image input needed"}
+           </div>
         </div>
       );
     }
+  };
+
+  // Render Text section (for any node with sourceNodeContent)
+  const renderTextSection = () => {
+    if (sourceNodeContent) {
+      return (
+        <div className="mt-1 w-full">
+          <div className="w-full flex flex-col items-center justify-center gap-1 p-2 bg-black/30 rounded-sm">
+            <div className="text-[9px] text-gray-400 text-center">
+              {isOutputNodeType ? "Connected Text" : "Text Preview"}
+            </div>
+            <div className="text-[10px] text-green-400 font-mono w-full tracking-tight leading-tight max-h-12 overflow-y-auto text-center break-words">
+              {sourceNodeContent}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -133,6 +192,9 @@ function NodeContentComponent({
          )}
       </div>
 
+      {/* Text Section (for any node with sourceNodeContent) */}
+      {renderTextSection()}
+
       {/* Children are rendered outside the main content area */} 
       {children}
     </div>
@@ -148,6 +210,14 @@ export const NodeContent = memo(NodeContentComponent, (prevProps, nextProps) => 
       next: "${nextProps.sourceNodeContent?.substring(0, 20)}"`);
     return false; // Different, should re-render
   }
+  
+  // Also check for image URL changes
+  if (prevProps.data?.imageUrl !== nextProps.data?.imageUrl) {
+    console.log(`[NodeContent Memo] Re-rendering due to imageUrl change:
+      prev: "${prevProps.data?.imageUrl}", 
+      next: "${nextProps.data?.imageUrl}"`);
+    return false; // Different, should re-render
+  }
 
   return (
     prevProps.isSubmitting === nextProps.isSubmitting &&
@@ -157,6 +227,7 @@ export const NodeContent = memo(NodeContentComponent, (prevProps, nextProps) => 
     prevProps.sourceImageUrl === nextProps.sourceImageUrl &&
     prevProps.sourceNodeContent === nextProps.sourceNodeContent &&
     prevProps.isDragging === nextProps.isDragging &&
+    prevProps.isOutputNode === nextProps.isOutputNode &&
     prevProps.data?.category === nextProps.data?.category &&
     prevProps.data?.caption === nextProps.data?.caption
   )

@@ -6,6 +6,10 @@ alwaysApply: true
 # Next.js Frontend Rules
 
 ## Coding Style
+- do not code at all unless user confirms your plan and tells you to 'code'
+- do not introduce custom code ever. do not suggest logging unless absolutely necessary for debugging very specific issue with the user
+- for any solved issue, remove related debugging
+- no backend work in this app. dont ask for it, dont mention it
 - do not introduce custom code or fix to a problem without first checking if codebase already has that function that just needs fixing
 - Write all code in TypeScript
 - Use simple, readable functions

@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { NodeProps } from "reactflow"
 import { useReactFlow } from 'reactflow';
 import type { ImageNodeData } from "@/types"
@@ -16,15 +16,28 @@ const setIsInteractingWithInputSelector = (state: any) => state.setIsInteracting
 const updateNodeImageSelector = (state: any) => state.updateNodeImage
 
 function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
+  // Add a state to force re-renders
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
   // Use stores with stable selectors
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
   const updateNodeImage = useFlowchartStore(updateNodeImageSelector)
   
+  // Debug check for updateNodeImage function
+  console.log(`[ImageNode] updateNodeImage function defined:`, !!updateNodeImage);
+
   // Get functions from visual mirror store
   const { showContent } = useVisualMirrorStore()
 
   // Get getEdges function from React Flow
-  const { getEdges } = useReactFlow();
+  const { getEdges, setNodes } = useReactFlow();
+  
+  // Debug log for image URL changes
+  useEffect(() => {
+    console.log(`[ImageNode:DEBUG] ${id} Current image URL: "${data.imageUrl || 'none'}"`);
+    // Force re-render whenever data.imageUrl changes
+    setForceUpdate(prev => prev + 1);
+  }, [id, data.imageUrl]);
 
   const handleInputInteraction = useCallback(
     (isInteracting = false) => {
@@ -58,6 +71,15 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
         // Update visual mirror for this node
         showContent(id, { imageUrl });
         
+        // Directly update this node's data in ReactFlow to ensure it refreshes
+        setNodes((nodes) => 
+          nodes.map((node) => 
+            node.id === id 
+              ? { ...node, data: { ...node.data, imageUrl: imageUrl } }
+              : node
+          )
+        );
+        
         // Find connected target nodes and update their visual content
         const currentEdges = getEdges();
         const targetNodeIds = currentEdges
@@ -68,7 +90,7 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
         targetNodeIds.forEach(targetId => {
           showContent(targetId, { imageUrl });
         });
-      }, [id, updateNodeImage, getEdges, showContent]),
+      }, [id, updateNodeImage, getEdges, showContent, setNodes]),
   })
 
   return (
@@ -84,14 +106,13 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
         contentProps={{
           imageUrl: data.imageUrl,
           isDragging,
-          // Don't pass dropRef directly in the props object to avoid serialization
-          // Instead, it will be accessed via the ref on the component itself
           handleDragOver,
           handleDragLeave,
           handleDrop,
           handleClick: handleClick,
-          isSubmitting: false, // Add required props
-          isGenerated: false, // Add required props
+          isSubmitting: false,
+          isGenerated: false,
+          key: `image-${data.imageUrl || "none"}-${forceUpdate}`,
         }}
         actionsProps={{
           imageUrl: data.imageUrl,

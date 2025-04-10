@@ -11,3 +11,14 @@ alwaysApply: true
 
 # Features
 
+- Core node connection logic in useFlowchartStore.ts
+- Node type definitions in dynamic-node-types.ts
+- Connection validation system in flowchart-utils.ts and node-model.ts
+✅ Code Organization
+- Keep node-related logic in designated files
+- Follow the established node connection system
+- Respect the connection validation rules
+✅ Feature Status
+- Core node connection logic works in useFlowchartStore.ts
+- Node type definitions work in dynamic-node-types.ts
+- Connection validation system works in flowchart-utils.ts and node-model.ts

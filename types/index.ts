@@ -25,6 +25,7 @@ export interface ImageNodeData extends BaseNodeData {
   quality?: number
   seed?: number
   model?: string
+  sourceImageUrl?: string
 }
 
 export interface VideoNodeData extends BaseNodeData {
@@ -37,6 +38,7 @@ export interface VideoNodeData extends BaseNodeData {
   modelSettings?: Record<string, any>
   onModelChange?: (modelId: string, settings: Record<string, any>) => void
   showVideo?: boolean
+  sourceImageUrl?: string
 }
 
 export interface TextNodeData extends BaseNodeData {

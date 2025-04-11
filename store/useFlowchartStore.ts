@@ -497,6 +497,16 @@ export const useFlowchartStore = create<FlowchartState>()(
                   
                   console.log(`[FlowchartStore] Auto-selecting targetHandle=${connection.targetHandle} for render node`);
                 }
+                
+                // Force the render node to recognize it's connected by adding a timestamp
+                updatedNodes[targetNodeIndex] = {
+                  ...targetNode,
+                  data: {
+                    ...targetNode.data,
+                    _connectedAt: Date.now(),
+                    _isConnected: true  // Add an explicit connection flag
+                  }
+                };
               }
               
               // Find and remove any existing edges of the same type to this target

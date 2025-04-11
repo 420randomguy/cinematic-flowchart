@@ -189,6 +189,12 @@ export function isValidConnection(
     return true
   }
 
+  // Special case for video nodes connecting to render nodes
+  if (sourceNodeType === "render" && 
+      (targetNodeType === "text-to-video" || targetNodeType === "image-to-video")) {
+    return true;
+  }
+
   // Text output to text input
   if (sourceRules.outputsText && targetRules.acceptsTextInput && (!targetHandle || targetHandle === "text")) {
     return true

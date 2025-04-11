@@ -48,11 +48,55 @@ export function SubmitButton({
         })
         .filter(Boolean)
       
-      // Find an existing render node that hasn't generated content yet
-      const unusedRenderNode = connectedRenderNodes.find(node => !node?.data?.hasGenerated)
+      // 1. Find an idle render node created from context menu (not submitted yet and not generating)
+      const idleContextMenuRenderNode = connectedRenderNodes.find(node => 
+        !node?.data?.isSubmitted && 
+        !node?.data?.hasGenerated
+      )
       
-      if (unusedRenderNode) {
+      // 2. Find an existing render node that hasn't generated content yet but was previously submitted
+      const unusedRenderNode = connectedRenderNodes.find(node => 
+        node?.data?.isSubmitted && 
+        !node?.data?.hasGenerated
+      )
+      
+      console.log("Connected render nodes:", connectedRenderNodes.map(n => ({ 
+        id: n?.id, 
+        isSubmitted: n?.data?.isSubmitted, 
+        hasGenerated: n?.data?.hasGenerated 
+      })))
+      
+      if (idleContextMenuRenderNode) {
+        // Reuse an idle render node created from context menu
+        console.log(`[SubmitButton] Reusing idle context menu render node: ${idleContextMenuRenderNode.id}`)
+        
+        // Force trigger generation in VisualMirrorStore for this node
+        const { startGeneration } = require('@/store/useVisualMirrorStore').useVisualMirrorStore.getState();
+        
+        setNodes(currentNodes => {
+          const updatedNodes = currentNodes.map(node => 
+            node.id === idleContextMenuRenderNode.id ? {
+              ...node,
+              data: {
+                ...node.data,
+                isSubmitted: true,
+                requestId: requestId
+              }
+            } : node
+          )
+          return updatedNodes
+        })
+        
+        // Delay the generation start slightly to ensure state updates are processed
+        setTimeout(() => {
+          if (!idleContextMenuRenderNode.data.hasGenerated) {
+            console.log(`[SubmitButton] Triggering generation for node: ${idleContextMenuRenderNode.id}`)
+            startGeneration(idleContextMenuRenderNode.id)
+          }
+        }, 100)
+      } else if (unusedRenderNode) {
         // Reuse existing render node that hasn't generated content yet
+        console.log(`[SubmitButton] Reusing existing submitted render node: ${unusedRenderNode.id}`)
         setNodes(currentNodes => {
           const updatedNodes = currentNodes.map(node => 
             node.id === unusedRenderNode.id ? {
@@ -68,9 +112,11 @@ export function SubmitButton({
         })
       } else if (connectedRenderNodes.length > 0) {
         // All connected render nodes already have content, create a new one
+        console.log(`[SubmitButton] All existing render nodes have content, creating new one`)
         createRenderNode(nodeId, requestId)
       } else {
         // No render nodes connected, create one
+        console.log(`[SubmitButton] No render nodes connected, creating new one`)
         createRenderNode(nodeId, requestId)
       }
     }

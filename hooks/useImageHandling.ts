@@ -221,16 +221,21 @@ export function useImageHandling({
               const imageUrl = reader.result as string;
               if (!imageUrl) return;
               
-              // Save to library
-              addImage({ url: imageUrl, type: "image", title: "Uploaded Image" });
-              
-              // Directly apply the image to the node (instead of just processing it)
+              // First apply the image directly
               console.log("[useImageHandling] Uploading and auto-selecting image");
               finalizeImageUpdate(imageUrl, file);
               
-              // Close the dialog after selection
+              // Then save to library (this doesn't affect immediate display)
+              try {
+                addImage({ url: imageUrl, type: "image", title: "Uploaded Image" });
+              } catch (error) {
+                console.error("Failed to add to library (continuing with selection):", error);
+              }
+              
+              // Finally close the dialog
               setShowImageSelector(false);
               handleInputInteraction?.(false);
+              
             } catch (error) { 
               console.error("Error processing uploaded file:", error); 
             }

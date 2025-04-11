@@ -99,6 +99,7 @@ export interface NodeActionsProps {
   imageUrl?: string | null
   showVideo?: boolean
   className?: string
+  nodeId?: string
 }
 
 /**

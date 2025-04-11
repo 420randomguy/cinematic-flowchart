@@ -508,44 +508,52 @@ function FlowchartCanvasInner() {
             reader.onload = (e) => {
               const dataUrl = e.target?.result as string
 
-              // Save the image to the library
-              addAsset({
-                url: dataUrl,
-                type: "image",
-                title: "Dropped Image",
-              })
+              try {
+                // Generate a unique ID for the new node
+                const id = `image_${Date.now()}`
 
-              // Generate a unique ID for the new node
-              const id = `image_${Date.now()}`
+                // Create the node data
+                const nodeData = {
+                  title: "IMAGE",
+                  showImage: true,
+                  category: "image",
+                  imageUrl: dataUrl,
+                  isNewNode: true,
+                }
 
-              // Create the node data
-              const nodeData = {
-                title: "IMAGE",
-                showImage: true,
-                category: "image",
-                imageUrl: dataUrl,
-                isNewNode: true,
+                // Create the new node
+                const newNode = {
+                  id,
+                  type: "image",
+                  position,
+                  data: nodeData,
+                }
+
+                // Save state before adding the node
+                saveState()
+
+                // Add the node to the flow
+                setNodes((nodes) => [...nodes, newNode])
+                
+                // IMPORTANT: Update the Visual Mirror Store
+                // This ensures the image will display in the node
+                showContent(id, { imageUrl: dataUrl })
+                
+                // Add to library with error handling
+                try {
+                  addAsset({
+                    url: dataUrl,
+                    type: "image",
+                    title: "Dropped Image",
+                  })
+                } catch (error) {
+                  console.error("Failed to add image to library (continuing with node creation):", error);
+                }
+                
+                console.log(`[FlowchartCanvas] Created new image node with id=${id} and updated VisualMirrorStore`)
+              } catch (error) {
+                console.error("Error creating image node:", error);
               }
-
-              // Create the new node
-              const newNode = {
-                id,
-                type: "image",
-                position,
-                data: nodeData,
-              }
-
-              // Save state before adding the node
-              saveState()
-
-              // Add the node to the flow
-              setNodes((nodes) => [...nodes, newNode])
-              
-              // IMPORTANT: Update the Visual Mirror Store
-              // This ensures the image will display in the node
-              showContent(id, { imageUrl: dataUrl })
-              
-              console.log(`[FlowchartCanvas] Created new image node with id=${id} and updated VisualMirrorStore`)
             }
             reader.readAsDataURL(file)
           }

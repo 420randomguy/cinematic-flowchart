@@ -1,5 +1,4 @@
 import { create } from "zustand"
-import { devtools, persist } from "zustand/middleware"
 
 // Define the asset type
 export interface SavedAsset {
@@ -25,61 +24,35 @@ interface ImageLibraryState {
   getSavedImages: () => string[]
 }
 
-// Maximum number of assets to keep in storage
-const MAX_STORED_ASSETS = 20;
+// Simple in-memory store with no persistence
+export const useImageLibraryStore = create<ImageLibraryState>((set, get) => ({
+  // Initial state
+  savedAssets: [],
 
-export const useImageLibraryStore = create<ImageLibraryState>()(
-  devtools(
-    persist(
-      (set, get) => ({
-        // Initial state
-        savedAssets: [],
+  // Actions
+  addAsset: (asset) => {
+    // Generate a unique ID
+    const id = `asset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-        // Actions
-        addAsset: (asset) =>
-          set((state) => {
-            try {
-              // Generate a unique ID
-              const id = `asset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    // Create the new asset with ID and timestamp
+    const newAsset: SavedAsset = {
+      ...asset,
+      id,
+      timestamp: Date.now(),
+    }
 
-              // Create the new asset with ID and timestamp
-              const newAsset: SavedAsset = {
-                ...asset,
-                id,
-                timestamp: Date.now(),
-              }
+    // Update state with the new asset (no limit)
+    set((state) => ({ 
+      savedAssets: [...state.savedAssets, newAsset] 
+    }))
+  },
 
-              // Get current assets
-              let updatedAssets = [...state.savedAssets, newAsset];
-              
-              // If we exceed the maximum, remove the oldest assets
-              if (updatedAssets.length > MAX_STORED_ASSETS) {
-                // Sort by timestamp (oldest first) and take only the most recent MAX_STORED_ASSETS
-                updatedAssets = updatedAssets
-                  .sort((a, b) => a.timestamp - b.timestamp)
-                  .slice(-MAX_STORED_ASSETS);
-              }
+  removeAsset: (id) =>
+    set((state) => ({
+      savedAssets: state.savedAssets.filter((asset) => asset.id !== id),
+    })),
 
-              return { savedAssets: updatedAssets }
-            } catch (error) {
-              // Handle any storage errors gracefully
-              console.error("Failed to add asset to storage:", error);
-              return state; // Return unchanged state
-            }
-          }),
-
-        removeAsset: (id) =>
-          set((state) => ({
-            savedAssets: state.savedAssets.filter((asset) => asset.id !== id),
-          })),
-
-        // Derived data
-        getSavedImages: () => get().savedAssets.map((asset) => asset.url),
-      }),
-      {
-        name: "image-library-storage",
-      },
-    ),
-  ),
-)
+  // Derived data
+  getSavedImages: () => get().savedAssets.map((asset) => asset.url),
+}))
 

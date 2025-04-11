@@ -158,6 +158,7 @@ function ImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) {
         }}
         actionsProps={{
           imageUrl: data.imageUrl,
+          nodeId: id,
         }}
       >
         <div 

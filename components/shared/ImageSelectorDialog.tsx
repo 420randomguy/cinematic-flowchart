@@ -54,12 +54,8 @@ function ImageSelectorDialogComponent({
                       e.preventDefault();
                       e.stopPropagation();
                       console.log("[ImageSelectorDialog] Image clicked, calling onSelectImage with:", img);
-                      // First close the dialog to prevent any interference
+                      onSelectImage(img);
                       onOpenChange(false);
-                      // Then select the image with a slight delay to ensure proper order
-                      setTimeout(() => {
-                        onSelectImage(img);
-                      }, 10);
                     }
                   }}
                 >

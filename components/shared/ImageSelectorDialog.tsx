@@ -33,7 +33,7 @@ function ImageSelectorDialogComponent({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black border border-gray-800 p-4 max-w-md">
+      <DialogContent className="bg-black border border-gray-800 max-w-md">
         <VisuallyHidden>
           <DialogTitle>Image Library</DialogTitle>
         </VisuallyHidden>

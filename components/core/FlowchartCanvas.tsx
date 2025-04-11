@@ -32,6 +32,7 @@ import CanvasToolbar from "@/components/controls/CanvasToolbar"
 import ImageCropModal from "@/components/modals/ImageCropModal"
 import DebugPanel from "@/components/debug/debug-panel"
 import UserProfileButton from "@/components/ui/user-profile-button"
+import AssetBoardButton from "@/components/ui/asset-board-button"
 
 // Import stores
 import { useFlowchartStore } from "@/store/useFlowchartStore"
@@ -807,6 +808,9 @@ function FlowchartCanvasInner() {
 
       {/* User Profile Button */}
       <UserProfileButton />
+
+      {/* Asset Board Button */}
+      <AssetBoardButton />
 
       {/* Debug Panel */}
       <DebugPanel />

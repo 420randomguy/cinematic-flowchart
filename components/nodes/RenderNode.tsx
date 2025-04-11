@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState, useEffect, useCallback } from "react"
+import { memo, useState, useEffect, useCallback, useRef } from "react"
 import type { NodeProps } from "reactflow"
 import { Handle, Position } from "reactflow"
 import { BaseNode } from "@/components/nodes/BaseNode"
@@ -8,6 +8,7 @@ import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 import { VisualMirrorRender } from "@/components/nodes/VisualMirror"
 import { ActionsSection } from "@/components/nodes/sections/ActionsSection"
+import { useImageLibraryStore } from "@/store/useImageLibraryStore"
 
 // Simple red square data URI for testing
 interface RenderNodeData {
@@ -25,6 +26,7 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
   const nodes = useFlowchartStore((state) => state.nodes)
   const edges = useFlowchartStore((state) => state.edges)
   const { visibleContent, startGeneration, updateGenerationTime, completeGeneration } = useVisualMirrorStore()
+  const addAsset = useImageLibraryStore((state) => state.addAsset)
   
   // States
   const [isGenerated, setIsGenerated] = useState(!!data.hasGenerated)
@@ -84,6 +86,30 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
           // Update content in VisualMirror store and mark generation as complete
           completeGeneration(id, { imageUrl: contentUrl })
           
+          // Prevent duplicate asset creation
+          const assetKey = `${id}_${contentUrl}`;
+          if (!alreadyAddedAssetsRef.current.has(assetKey)) {
+            alreadyAddedAssetsRef.current.add(assetKey);
+            
+            // Add the generated content to the Asset Board
+            addAsset({
+              url: contentUrl,
+              type: isVideoContent ? "video" : "image",
+              title: data.title || `${isVideoContent ? "Video" : "Image"} Render`,
+              description: `Generated from ${sourceNode?.type || "unknown"} node`,
+              settings: {
+                sourceNodeType: sourceNode?.type,
+                sourceNodeId: sourceNode?.id,
+                renderNodeId: id,
+                generatedAt: new Date().toISOString()
+              }
+            });
+            
+            console.log(`[RenderNode ${id}] Added ${isVideoContent ? "video" : "image"} to Asset Board`);
+          } else {
+            console.log(`[RenderNode ${id}] Asset already exists, skipping addition to Asset Board`);
+          }
+          
           // Update node data to remember that generation has occurred
           useFlowchartStore.getState().setNodes(nodes => 
             nodes.map(node => 
@@ -104,7 +130,7 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
       
       return () => clearInterval(interval)
     }
-  }, [isGenerating, isGenerated, isVideoContent, id, startGeneration, updateGenerationTime, completeGeneration])
+  }, [isGenerating, isGenerated, isVideoContent, id, startGeneration, updateGenerationTime, completeGeneration, addAsset, data.title, sourceNode])
   
   // Listen for isSubmitted flag changes from the submit button
   useEffect(() => {
@@ -121,6 +147,9 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
       setIsGenerated(true)
     }
   }, [data.hasGenerated, isGenerated])
+  
+  // Inside the component, add this after the existing state hooks
+  const alreadyAddedAssetsRef = useRef(new Set());
   
   return (
     <div className="render-node relative" onMouseDown={() => setIsInteractingWithInput(false)}>

@@ -628,24 +628,19 @@ export function useNodeConnections({ id, textHandleId = "text", imageHandleId = 
 // Node Events Hook
 // ==========================================
 export function useNodeEvents(id, options = {}) {
-  const { setNodes, getNode } = useReactFlow()
+  const { getNode } = useReactFlow()
+  
+  // Get the centralized function from the store
+  const setSelectedNodeId = useFlowchartStore((state) => state.setSelectedNodeId)
 
   // Handle node selection
   const handleNodeSelect = useCallback(() => {
-    setNodes((nodes) =>
-      nodes.map((node) => ({
-        ...node,
-        selected: node.id === id,
-        style: {
-          ...node.style,
-          filter: node.id === id ? "drop-shadow(0 0 8px rgba(255, 255, 255, 0.2))" : undefined,
-        },
-      })),
-    )
-
+    // Use the centralized function
+    setSelectedNodeId(id)
+    
     // Call custom onSelect handler if provided
     options.onSelect?.()
-  }, [id, setNodes, options])
+  }, [id, setSelectedNodeId, options])
 
   // Handle node deletion
   const handleNodeDelete = useCallback(() => {

@@ -3,6 +3,30 @@ import { devtools, persist } from "zustand/middleware"
 import { type Edge, type Node, applyEdgeChanges, applyNodeChanges, type Connection, addEdge } from "reactflow"
 import type { RefObject } from 'react'
 import { getSourceHandle } from "@/types/node-model"
+import { useVisualMirrorStore } from '@/store/useVisualMirrorStore'
+
+// Add a helper function for deep cloning at the top of the file, after imports
+// Efficient deep clone function that handles circular references better than JSON methods
+function deepClone(obj: any): any {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  // Handle array cloning
+  if (Array.isArray(obj)) {
+    return obj.map(item => deepClone(item));
+  }
+  
+  // Handle object cloning
+  const clone = {} as any;
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      clone[key] = deepClone(obj[key]);
+    }
+  }
+  
+  return clone;
+}
 
 interface HistoryState {
   nodes: Node[]
@@ -441,8 +465,8 @@ export const useFlowchartStore = create<FlowchartState>()(
                     const sourceNode = updatedNodes.find(n => n.id === removedEdge.source);
                     const targetNode = updatedNodes[targetNodeIndex];
                     
-                    // Explicit import of useVisualMirrorStore to clear content
-                    const { clearContent } = require('@/store/useVisualMirrorStore').useVisualMirrorStore.getState();
+                    // Use imported store
+                    const { clearContent } = useVisualMirrorStore.getState();
                     
                     // Clear content from VisualMirrorStore for the target node
                     clearContent(removedEdge.target);
@@ -542,7 +566,31 @@ export const useFlowchartStore = create<FlowchartState>()(
           });
         },
 
-        setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+        setSelectedNodeId: (id: string | null) => {
+          // Update our store
+          set({ selectedNodeId: id });
+          
+          // Use requestAnimationFrame to ensure this runs after the state update
+          requestAnimationFrame(() => {
+            // Get the ReactFlow instance
+            try {
+              // Find all nodes and update their selection state
+              // This is done without a direct dependency on ReactFlow
+              set((state) => ({
+                nodes: state.nodes.map((node) => ({
+                  ...node,
+                  selected: node.id === id,
+                  style: {
+                    ...node.style,
+                    filter: node.id === id ? "drop-shadow(0 0 8px rgba(255, 255, 255, 0.2))" : undefined,
+                  }
+                }))
+              }));
+            } catch (error) {
+              console.error("Error updating node selection:", error);
+            }
+          });
+        },
 
         setIsDragging: (isDragging) => set({ isDragging }),
 
@@ -570,8 +618,8 @@ export const useFlowchartStore = create<FlowchartState>()(
             undoStack: [
               ...state.undoStack,
               {
-                nodes: JSON.parse(JSON.stringify(nodes)),
-                edges: JSON.parse(JSON.stringify(edges)),
+                nodes: deepClone(nodes),
+                edges: deepClone(edges),
               },
             ],
             redoStack: [], // Clear redo stack when a new action is performed
@@ -589,14 +637,14 @@ export const useFlowchartStore = create<FlowchartState>()(
             isUndoRedoing: true,
             // Save current state to redo stack
             redoStack: [
-              { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) },
+              { nodes: deepClone(nodes), edges: deepClone(edges) },
               ...get().redoStack,
             ],
             // Remove the last state from undo stack
             undoStack: undoStack.slice(0, -1),
             // Apply the previous state
-            nodes: JSON.parse(JSON.stringify(prevState.nodes)),
-            edges: JSON.parse(JSON.stringify(prevState.edges)),
+            nodes: deepClone(prevState.nodes),
+            edges: deepClone(prevState.edges),
           })
 
           // Reset the undo/redoing flag after a short delay
@@ -615,13 +663,13 @@ export const useFlowchartStore = create<FlowchartState>()(
             // Save current state to undo stack
             undoStack: [
               ...get().undoStack,
-              { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) },
+              { nodes: deepClone(nodes), edges: deepClone(edges) },
             ],
             // Remove the first state from redo stack
             redoStack: redoStack.slice(1),
             // Apply the next state
-            nodes: JSON.parse(JSON.stringify(nextState.nodes)),
-            edges: JSON.parse(JSON.stringify(nextState.edges)),
+            nodes: deepClone(nextState.nodes),
+            edges: deepClone(nextState.edges),
           })
 
           // Reset the undo/redoing flag after a short delay

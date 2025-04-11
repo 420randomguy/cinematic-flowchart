@@ -31,7 +31,6 @@ import CanvasContextMenu from "@/components/canvas/CanvasContextMenu"
 import CanvasToolbar from "@/components/controls/CanvasToolbar"
 import ImageCropModal from "@/components/modals/ImageCropModal"
 import DebugPanel from "@/components/debug/debug-panel"
-import ElementReferencePanel from "@/components/ui/element-reference-panel"
 
 // Import stores
 import { useFlowchartStore } from "@/store/useFlowchartStore"
@@ -807,9 +806,6 @@ function FlowchartCanvasInner() {
 
       {/* Debug Panel */}
       <DebugPanel />
-
-      {/* Element Reference Panel */}
-      <ElementReferencePanel />
     </div>
   )
 }

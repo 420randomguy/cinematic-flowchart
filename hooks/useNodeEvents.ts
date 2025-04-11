@@ -25,21 +25,9 @@ export function useNodeEvents(id: string) {
 
   // Handle node selection - update both ReactFlow and our store
   const handleNodeSelect = useCallback(() => {
-    // Set selected node ID in our store
+    // Use the centralized function that handles both store update and visual selection
     setSelectedNodeId(id)
-    
-    // Also update ReactFlow's internal selection state for visual feedback
-    setNodes((nodes) =>
-      nodes.map((node) => ({
-        ...node,
-        selected: node.id === id,
-        style: {
-          ...node.style,
-          filter: node.id === id ? "drop-shadow(0 0 8px rgba(255, 255, 255, 0.2))" : undefined,
-        },
-      })),
-    )
-  }, [id, setNodes, setSelectedNodeId])
+  }, [id, setSelectedNodeId])
 
   // Handle node deletion - now using the centralized store function
   const handleNodeDelete = useCallback(() => {

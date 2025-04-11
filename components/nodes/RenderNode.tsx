@@ -129,14 +129,42 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
         type="target"
         position={Position.Left}
         id="image"
-        style={{ background: '#ffcc00', top: 30 }} 
+        style={{ 
+          background: '#ffcc00', 
+          top: 30,
+          width: '12px',
+          height: '12px',
+          border: '2px solid rgba(255, 204, 0, 0.5)'
+        }} 
         isConnectable={isConnectable}
       />
       <Handle
         type="target"
         position={Position.Left}
         id="video"
-        style={{ background: '#00ccff', top: 60 }}
+        style={{ 
+          background: '#00ccff', 
+          top: 60,
+          width: '12px',
+          height: '12px', 
+          border: '2px solid rgba(0, 204, 255, 0.5)',
+          zIndex: 10 // Ensure it's above other elements
+        }}
+        isConnectable={isConnectable}
+      />
+      
+      {/* Add source handles too */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="output"
+        style={{ 
+          background: '#ffcc00', 
+          top: 30,
+          width: '12px',
+          height: '12px',
+          border: '2px solid rgba(255, 204, 0, 0.5)'
+        }}
         isConnectable={isConnectable}
       />
       

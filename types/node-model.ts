@@ -164,6 +164,8 @@ export function isValidConnection(
   sourceHandle?: string | null,
   targetHandle?: string | null,
 ): boolean {
+  console.log(`Checking connection: ${sourceNodeType} -> ${targetNodeType} (sourceHandle: ${sourceHandle}, targetHandle: ${targetHandle})`)
+  
   // Get the rules for both node types
   const sourceRules = NODE_MODELS[sourceNodeType]?.rules
   const targetRules = NODE_MODELS[targetNodeType]?.rules
@@ -171,46 +173,54 @@ export function isValidConnection(
   // If either node type doesn't exist in our model, the connection is invalid
   if (!sourceRules || !targetRules) return false
 
+  // Special case for video nodes to render nodes - always allow these connections in either direction
+  if ((sourceNodeType === "text-to-video" || sourceNodeType === "image-to-video") && 
+      targetNodeType === "render") {
+    console.log("✅ Valid: Video node -> Render node")
+    return true
+  }
+
+  // Special case for render nodes to video nodes
+  if (sourceNodeType === "render" && 
+     (targetNodeType === "text-to-video" || targetNodeType === "image-to-video")) {
+    console.log("✅ Valid: Render node -> Video node")
+    return true
+  }
+  
   // Special case for Render node which can accept any output
   if (targetNodeType === "render") {
-    // For video sources to video handle
-    if ((sourceNodeType === "text-to-video" || sourceNodeType === "image-to-video") && 
-        (!targetHandle || targetHandle === "video")) {
-      return true
-    }
-    
     // For image sources to image handle
     if ((sourceNodeType === "image" || sourceNodeType === "text-to-image" || sourceNodeType === "image-to-image") && 
         (!targetHandle || targetHandle === "image")) {
+      console.log("✅ Valid: Image node -> Render node")
       return true
     }
     
     // Default case - accept any connection where target is render
+    console.log("✅ Valid: Any -> Render (default case)")
     return true
-  }
-
-  // Special case for video nodes connecting to render nodes
-  if (sourceNodeType === "render" && 
-      (targetNodeType === "text-to-video" || targetNodeType === "image-to-video")) {
-    return true;
   }
 
   // Text output to text input
   if (sourceRules.outputsText && targetRules.acceptsTextInput && (!targetHandle || targetHandle === "text")) {
+    console.log("✅ Valid: Text output -> Text input")
     return true
   }
 
   // Image output to image input
   if (sourceRules.outputsImage && targetRules.acceptsImageInput && (!targetHandle || targetHandle === "image")) {
+    console.log("✅ Valid: Image output -> Image input")
     return true
   }
 
   // Video output to video input (when target accepts video)
   if (sourceRules.outputsVideo && targetHandle === "video") {
+    console.log("✅ Valid: Video output -> Video input")
     return true
   }
 
   // If we get here, the connection is invalid
+  console.log("❌ Invalid connection")
   return false
 }
 

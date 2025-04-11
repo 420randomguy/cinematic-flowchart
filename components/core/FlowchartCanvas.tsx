@@ -171,6 +171,14 @@ function FlowchartCanvasInner() {
         console.log(`[FlowchartCanvas] Assigned sourceHandle=${connection.sourceHandle} for source node type ${sourceNode.type}`);
       }
       
+      // Special handling for video connections to render nodes
+      if ((sourceNode.type === "text-to-video" || sourceNode.type === "image-to-video") && 
+          targetNode.type === "render") {
+        // Force video handle for video-to-render connections
+        connection.targetHandle = "video";
+        console.log(`[FlowchartCanvas] Forced video targetHandle for video-to-render connection`);
+      }
+      
       // Debug connection details
       console.log(`[FlowchartCanvas] Creating edge with sourceHandle=${connection.sourceHandle}, targetHandle=${connection.targetHandle}`);
       
@@ -270,6 +278,29 @@ function FlowchartCanvasInner() {
         return
       }
 
+      // Special handling for video nodes connecting to render nodes
+      // Allow connections from video nodes to drop anywhere on the render node
+      if ((sourceNode.type === "text-to-video" || sourceNode.type === "image-to-video") && 
+          targetNode.type === "render") {
+        // Create connection with explicit video target handle
+        const connection: Connection = {
+          source: connectionStartNodeId,
+          sourceHandle: connectionStartHandleId || "video",
+          target: targetNodeId,
+          targetHandle: "video",
+        }
+        
+        console.log("[FlowchartCanvas] Created video-to-render connection with explicit video handle")
+        handleConnect(connection)
+        
+        // Reset connection state
+        setConnectionStartNodeId(null)
+        setConnectionStartHandleType(null)
+        setConnectionStartHandleId(null)
+        return
+      }
+
+      // Normal flow for other connection types
       // Determine the best target handle
       const targetHandleId = getTargetHandle(sourceNode, targetNode)
       if (!targetHandleId) return

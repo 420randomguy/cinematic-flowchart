@@ -1,118 +1,190 @@
 "use client"
 
-import { memo, useState, useEffect } from "react"
+import { memo, useState, useEffect, useCallback, useMemo } from "react"
 import type { NodeProps } from "reactflow"
+import { Handle, Position } from "reactflow"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 import { VisualMirrorRender } from "@/components/nodes/VisualMirror"
+import { ActionsSection } from "@/components/nodes/sections/ActionsSection"
 
+// Simple red square data URI for testing
 interface RenderNodeData {
   title?: string
   sourceNodeId?: string
-  imageUrl?: string
+  requestId?: string
+  isSubmitted?: boolean
+  hasGenerated?: boolean
 }
 
 function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
   const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
   const nodes = useFlowchartStore((state) => state.nodes)
-  const showContent = useVisualMirrorStore((state) => state.showContent)
+  const edges = useFlowchartStore((state) => state.edges)
+  const { showContent, visibleContent } = useVisualMirrorStore()
   
-  // State for render generation
-  const [isSubmitting, setIsSubmitting] = useState(true)
-  const [isGenerated, setIsGenerated] = useState(false)
+  // States
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGenerated, setIsGenerated] = useState(!!data.hasGenerated)
   const [timeRemaining, setTimeRemaining] = useState(5)
   
-  // State for content type
-  const [isVideoContent, setIsVideoContent] = useState(false)
-  
-  // Title with default
-  const title = data?.title || "RENDER"
-  
-  // Check the source node type to determine content type
-  useEffect(() => {
-    if (data.sourceNodeId) {
-      const sourceNode = nodes.find(node => node.id === data.sourceNodeId)
-      if (sourceNode) {
-        // Check if the source node is a video node
-        const isVideo = sourceNode.type === "text-to-video" || sourceNode.type === "image-to-video"
-        setIsVideoContent(isVideo)
-        
-        // Set the content URL based on the type
-        const newContentUrl = isVideo ? "/akira-animation.gif" : "/sample-image.png"
-        
-        // If we're already generated, update the content in the store
-        if (isGenerated) {
-          showContent(id, { imageUrl: newContentUrl })
-        }
-      }
-    }
-  }, [data.sourceNodeId, nodes, id, showContent, isGenerated])
-  
-  // Countdown timer effect
-  useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
+  // Check if connected to an output-producing node
+  const { isConnectedToOutput, sourceNodeType } = useMemo(() => {
+    const connectedEdge = edges.find(edge => edge.target === id)
+    if (!connectedEdge) return { isConnectedToOutput: false, sourceNodeType: null }
     
-    if (isSubmitting) {
-      console.log("[RenderNode] Starting countdown timer")
-      timer = setInterval(() => {
-        setTimeRemaining(prev => {
-          console.log(`[RenderNode] Timer tick: ${prev} seconds remaining`)
-          if (prev <= 1) {
-            console.log("[RenderNode] Timer complete, setting isGenerated=true")
-            if (timer) {
-              clearInterval(timer)
-              timer = null;
-            }
+    const sourceNode = nodes.find(node => node.id === connectedEdge.source)
+    if (!sourceNode) return { isConnectedToOutput: false, sourceNodeType: null }
+    
+    const isValidSource = [
+      "output", 
+      "text-to-image", 
+      "image-to-image",
+      "text-to-video", 
+      "image-to-video"
+    ].includes(sourceNode.type as string)
+    
+    return { 
+      isConnectedToOutput: isValidSource, 
+      sourceNodeType: isValidSource ? sourceNode.type : null
+    }
+  }, [edges, nodes, id])
+  
+  // Determine if this is video content
+  const isVideoContent = useMemo(() => {
+    return sourceNodeType === "text-to-video" || sourceNodeType === "image-to-video"
+  }, [sourceNodeType])
+  
+  // Get content URL from VisualMirrorStore
+  const currentContent = visibleContent[id]
+  const contentUrl = currentContent?.imageUrl
+  
+  // Handle submit
+  const handleSubmit = useCallback(() => {
+    if (!isSubmitting && !isGenerated) {
+      setIsSubmitting(true)
+      
+      // 5 second countdown
+      let time = 5
+      const interval = setInterval(() => {
+        time--
+        setTimeRemaining(time)
+        
+        if (time <= 0) {
+          clearInterval(interval)
+          
+          // Use local test files based on source node type
+          const contentUrl = isVideoContent
+            ? "/testvideo.mp4"
+            : "/testimage.jpg";
+          
+          // Update content in VisualMirror store
+          showContent(id, { imageUrl: contentUrl })
+          
+          // Update node data to remember that generation has occurred
+          useFlowchartStore.getState().setNodes(nodes => 
+            nodes.map(node => 
+              node.id === id ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  hasGenerated: true
+                }
+              } : node
+            )
+          )
+          
+          // Set isGenerated flag
+          setIsGenerated(true)
+          
+          // Keep isSubmitting state much longer (5 seconds)
+          setTimeout(() => {
             setIsSubmitting(false)
-            setIsGenerated(true)
-            return 0
-          }
-          return prev - 1
-        })
+          }, 5000);
+        }
       }, 1000)
+      
+      return () => clearInterval(interval)
     }
-    
-    return () => {
-      console.log("[RenderNode] Cleaning up timer")
-      if (timer) {
-        clearInterval(timer)
-        timer = null;
-      }
-    }
-  }, []) // Run only on mount
-
-  // Separate effect to update VisualMirror when generation completes
+  }, [isSubmitting, isGenerated, isVideoContent, id, showContent])
+  
+  // Listen for isSubmitted flag changes from the submit button
   useEffect(() => {
-    // Only update the visual mirror when generation is complete
-    if (isGenerated) {
-      console.log("[RenderNode] Generation complete, updating VisualMirror")
-      const contentType = isVideoContent ? "/akira-animation.gif" : "/sample-image.png"
-      showContent(id, { imageUrl: contentType })
+    // Auto-trigger generation when node is connected to a source node and has been submitted
+    if (isConnectedToOutput && data.isSubmitted && !isSubmitting && !isGenerated) {
+      handleSubmit()
     }
-  }, [isGenerated, isVideoContent, id, showContent])
+  }, [data, isConnectedToOutput, handleSubmit, isSubmitting, isGenerated])
+  
+  // Sync with data.hasGenerated
+  useEffect(() => {
+    if (data.hasGenerated && !isGenerated) {
+      setIsGenerated(true)
+    }
+  }, [data.hasGenerated, isGenerated])
   
   return (
-    <div className="render-node" onMouseDown={() => setIsInteractingWithInput(false)}>
+    <div className="render-node relative" onMouseDown={() => setIsInteractingWithInput(false)}>
+      {/* Handles for ReactFlow connections */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="image"
+        style={{ background: '#ffcc00', top: 30 }} 
+        isConnectable={isConnectable}
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="video"
+        style={{ background: '#00ccff', top: 60 }}
+        isConnectable={isConnectable}
+      />
+      
       <BaseNode
         id={id}
         data={{
           ...data,
-          showImage: true, // Enable image display in BaseNode
+          skipNodeContent: true,
         }}
         nodeType="render"
-        title={title}
+        title={data.title || "RENDER"}
+        showSourceHandle={false}
+        showTargetHandle={false}
+        externalHandles={true}
         isConnectable={isConnectable}
       >
-        <VisualMirrorRender 
-          nodeId={id}
-          isSubmitting={isSubmitting}
-          timeRemaining={timeRemaining}
-          showCompletionBadge={isGenerated}
-        />
+        <div className="w-full h-full">
+          {!isConnectedToOutput ? (
+            <div className="flex flex-col items-center justify-center p-4 min-h-[120px]">
+              <div className="text-[11px] text-gray-400 text-center">Connect to Output</div>
+            </div>
+          ) : (
+            <>
+              <VisualMirrorRender 
+                nodeId={id} 
+                isSubmitting={isSubmitting} 
+                timeRemaining={timeRemaining}
+                showCompletionBadge={isGenerated && !isSubmitting}
+                showControls={false}
+              />
+              
+              {/* Always show actions section */}
+              <div className="border-t border-gray-800/50 mt-2">
+                <ActionsSection 
+                  imageUrl={contentUrl || ""} 
+                  showVideo={isVideoContent}
+                  className="px-2" 
+                  nodeId={id}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </BaseNode>
     </div>
   )
 }
 
-export default memo(RenderNode) 
+export default memo(RenderNode)

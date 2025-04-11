@@ -2,19 +2,20 @@
 
 import { memo, useRef, useCallback, useEffect } from "react"
 import { Maximize2, Download } from "lucide-react"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 import { createInteractiveProps } from "@/lib/utils/node-interaction"
-import Image from "next/image"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
+import { VisualMirrorRender } from "@/components/nodes/VisualMirror"
 
 interface ActionsSectionProps {
   imageUrl?: string | null
   showVideo?: boolean
   className?: string
   title?: string
+  nodeId: string
 }
 
-function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", title }: ActionsSectionProps) {
+function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", title, nodeId }: ActionsSectionProps) {
   // Use the store directly
   const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
   const interactiveProps = createInteractiveProps(handleInputInteraction)
@@ -46,6 +47,9 @@ function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", 
     document.body.removeChild(link)
   }, [])
 
+  // Extract onClick from interactiveProps to avoid conflict
+  const { onClick: _ignoredClick, ...safeInteractiveProps } = interactiveProps
+
   return (
     <div className={`pt-2 pb-1 ${className}`}>
       {title && <div className="text-[9px] uppercase text-gray-500 tracking-wide mb-1.5">{title}</div>}
@@ -54,32 +58,22 @@ function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", 
         <div className="flex gap-1">
           <Dialog onOpenChange={handleDialogChange}>
             <DialogTrigger asChild>
-              <button className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500" {...interactiveProps}>
+              <button className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500" {...safeInteractiveProps}>
                 <Maximize2 className="h-2.5 w-2.5" />
               </button>
             </DialogTrigger>
-            <DialogContent className="bg-black/95 border border-gray-800 p-0 max-w-3xl">
-              <div className="aspect-video w-full overflow-hidden">
-                {showVideo ? (
-                  <Image
-                    src="/akira-animation.gif"
-                    alt="Generated video fullscreen"
-                    width={1200}
-                    height={675}
-                    className="object-contain w-full h-full"
-                    priority={false}
-                    loading="lazy"
-                  />
-                ) : imageUrlRef.current ? (
-                  <img
-                    src={imageUrlRef.current || "/placeholder.svg"}
-                    alt="Preview fullscreen"
-                    className="object-contain w-full h-full"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-500">No image available</div>
-                )}
+            <DialogContent className="bg-black/95 border border-gray-800 p-0 max-w-[90vw] max-h-[90vh] w-auto h-auto">
+              <DialogTitle className="sr-only">
+                {showVideo ? "Video Preview" : "Image Preview"}
+              </DialogTitle>
+              <div className="w-full h-full overflow-hidden">
+                <VisualMirrorRender 
+                  nodeId={nodeId} 
+                  isSubmitting={false}
+                  showCompletionBadge={false}
+                  showControls={true}
+                  isFullscreen={true}
+                />
               </div>
             </DialogContent>
           </Dialog>
@@ -87,7 +81,7 @@ function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", 
             className="p-0.5 rounded-sm hover:bg-gray-800 text-gray-500"
             onClick={handleDownload}
             disabled={!imageUrlRef.current}
-            {...interactiveProps}
+            {...safeInteractiveProps}
           >
             <Download className="h-2.5 w-2.5" />
           </button>

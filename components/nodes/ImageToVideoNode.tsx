@@ -82,14 +82,15 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
       showContent(id, { imageUrl: sourceImageUrlToDisplay })
     }
     
-    if (data.videoUrl) {
-      showContent(id, { imageUrl: data.videoUrl })
+    // Show placeholder or actual video when generated
+    if (isGenerated && !isSubmitting) {
+      showContent(id, { imageUrl: data.videoUrl || "/akira-animation.gif" })
     }
     
     return () => {
       clearContent(id)
     }
-  }, [id, textToDisplay, sourceImageUrlToDisplay, data.videoUrl, showContent, clearContent])
+  }, [id, textToDisplay, sourceImageUrlToDisplay, isGenerated, isSubmitting, data.videoUrl, showContent, clearContent])
 
   // This node outputs a video
   const outputVideoUrl = data.videoUrl || "/akira-animation.gif" // Use a placeholder if none available

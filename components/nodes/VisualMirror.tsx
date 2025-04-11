@@ -95,17 +95,34 @@ export const VisualMirrorRender = memo(({
   nodeId, 
   isSubmitting = false, 
   timeRemaining = 0,
-  showCompletionBadge = false
+  showCompletionBadge = false,
+  showControls = false,
+  isFullscreen = false
 }: { 
   nodeId: string, 
   isSubmitting?: boolean, 
   timeRemaining?: number,
-  showCompletionBadge?: boolean
+  showCompletionBadge?: boolean,
+  showControls?: boolean,
+  isFullscreen?: boolean
 }) => {
+  // Get content from the store
+  const { visibleContent } = useVisualMirrorStore()
+  const visualData = visibleContent[nodeId] || {}
+  const hasContent = !!visualData.imageUrl
+  
+  // Determine if this is a video content (check file extension)
+  const isVideo = hasContent && (
+    visualData.imageUrl?.endsWith('.mp4') || 
+    visualData.imageUrl?.endsWith('.gif') || 
+    visualData.imageUrl?.endsWith('.webm')
+  )
+  
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Only show generating UI when submitting */}
       {isSubmitting ? (
-        <div className="flex flex-col items-center justify-center p-4 min-h-[120px]">
+        <div className="flex flex-col items-center justify-center p-4 min-h-[120px] w-full">
           <div className="text-[11px] text-gray-400 text-center mb-3">Generating...</div>
           <div className="text-[10px] text-gray-500 text-center mb-2">Est. time: {timeRemaining}s</div>
           <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
@@ -116,8 +133,27 @@ export const VisualMirrorRender = memo(({
           </div>
         </div>
       ) : (
-        <div className="relative w-full h-full flex items-center justify-center p-2 min-h-[120px]">
-          <VisualMirrorImage nodeId={nodeId} hidePrompt={true} />
+        /* When we're not submitting, show the content */
+        <div className="relative w-full h-full min-h-[120px]">
+          {hasContent && (
+            <div className={`w-full h-full overflow-hidden ${isVideo && !isFullscreen ? 'aspect-video' : ''}`}>
+              {isVideo ? (
+                <video 
+                  src={visualData.imageUrl} 
+                  controls={showControls}
+                  autoPlay
+                  loop
+                  className={`object-contain w-full ${isFullscreen ? 'h-auto max-h-[85vh]' : 'h-full max-h-[200px]'}`}
+                />
+              ) : (
+                <img 
+                  src={visualData.imageUrl} 
+                  alt="Preview" 
+                  className={`object-contain w-full ${isFullscreen ? 'h-auto max-h-[85vh]' : 'h-full max-h-[200px]'}`}
+                />
+              )}
+            </div>
+          )}
           {showCompletionBadge && (
             <div className="absolute bottom-1 right-1 text-[8px] text-yellow-300 bg-black/50 px-1 rounded">
               Render Complete

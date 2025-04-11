@@ -87,10 +87,15 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
       showContent(id, { imageUrl: sourceImageUrlToDisplay })
     }
     
+    // Show placeholder or actual image when generated
+    if (isGenerated && !isSubmitting) {
+      showContent(id, { imageUrl: data.imageUrl || "/sample-image.png" })
+    }
+    
     return () => {
       clearContent(id)
     }
-  }, [id, textToDisplay, sourceImageUrlToDisplay, showContent, clearContent])
+  }, [id, textToDisplay, sourceImageUrlToDisplay, isGenerated, isSubmitting, data.imageUrl, showContent, clearContent])
 
   // The output image URL when generated
   const outputImageUrl = data.imageUrl || null

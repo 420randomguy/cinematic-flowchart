@@ -8,6 +8,7 @@ export type NodeCategory =
   | "text-to-video"
   | "image-to-video"
   | "render"
+  | "output"
 
 // Define what inputs each node type accepts
 export interface NodeConnectionRules {
@@ -121,6 +122,17 @@ export const NODE_MODELS: Record<
     },
     defaultSettings: {},
   },
+  "output": {
+    title: "OUTPUT",
+    rules: {
+      acceptsTextInput: true,
+      acceptsImageInput: true,
+      outputsText: true,
+      outputsImage: true,
+      outputsVideo: true,
+    },
+    defaultSettings: {},
+  },
 }
 
 // Helper function to get target handles for a node type
@@ -159,6 +171,24 @@ export function isValidConnection(
   // If either node type doesn't exist in our model, the connection is invalid
   if (!sourceRules || !targetRules) return false
 
+  // Special case for Render node which can accept any output
+  if (targetNodeType === "render") {
+    // For video sources to video handle
+    if ((sourceNodeType === "text-to-video" || sourceNodeType === "image-to-video") && 
+        (!targetHandle || targetHandle === "video")) {
+      return true
+    }
+    
+    // For image sources to image handle
+    if ((sourceNodeType === "image" || sourceNodeType === "text-to-image" || sourceNodeType === "image-to-image") && 
+        (!targetHandle || targetHandle === "image")) {
+      return true
+    }
+    
+    // Default case - accept any connection where target is render
+    return true
+  }
+
   // Text output to text input
   if (sourceRules.outputsText && targetRules.acceptsTextInput && (!targetHandle || targetHandle === "text")) {
     return true
@@ -166,6 +196,11 @@ export function isValidConnection(
 
   // Image output to image input
   if (sourceRules.outputsImage && targetRules.acceptsImageInput && (!targetHandle || targetHandle === "image")) {
+    return true
+  }
+
+  // Video output to video input (when target accepts video)
+  if (sourceRules.outputsVideo && targetHandle === "video") {
     return true
   }
 

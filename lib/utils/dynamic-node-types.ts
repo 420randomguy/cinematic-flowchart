@@ -9,6 +9,7 @@ const TextToVideoNode = memo(createLazyComponent(() => import("@/components/node
 const TextToImageNode = memo(createLazyComponent(() => import("@/components/nodes/TextToImageNode")))
 const ImageToImageNode = memo(createLazyComponent(() => import("@/components/nodes/ImageToImageNode")))
 const RenderNode = memo(createLazyComponent(() => import("@/components/nodes/RenderNode")))
+const OutputNode = memo(createLazyComponent(() => import("@/components/nodes/OutputNode")))
 
 // Export node types as a stable object reference that won't change between renders
 // Define this outside of any component or function to ensure it's only created once
@@ -23,8 +24,9 @@ export const nodeTypes = Object.freeze({
   "text-to-image": TextToImageNode,
   "image-to-image": ImageToImageNode,
   
-  // Render Node
+  // Special Nodes
   "render": RenderNode,
+  "output": OutputNode,
 })
 
 // Preload all node types when the browser is idle

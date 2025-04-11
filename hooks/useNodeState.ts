@@ -61,7 +61,9 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
   const handleSubmitToggle = useCallback(() => {
     // Create a render node using the flowchart store
     const createRenderNode = useFlowchartStore((state) => state.createRenderNode)
-    createRenderNode(id)
+    // Generate a request ID using current timestamp
+    const requestId = Date.now().toString()
+    createRenderNode(id, requestId)
   }, [id])
 
   // Memoize common node props to prevent unnecessary re-renders

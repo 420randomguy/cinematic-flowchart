@@ -375,6 +375,4 @@ function BaseNodeComponent({
 }
 
 // Export component directly
-export const BaseNode = BaseNodeComponent;
-
-
+export const BaseNode = BaseNodeComponent; 

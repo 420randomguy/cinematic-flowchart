@@ -41,14 +41,15 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
       showContent(id, { text: textToDisplay })
     }
     
-    if (data.videoUrl) {
-      showContent(id, { imageUrl: data.videoUrl })
+    // Show placeholder or actual video
+    if (isGenerated && !isSubmitting) {
+      showContent(id, { imageUrl: data.videoUrl || "/akira-animation.gif" })
     }
     
     return () => {
       clearContent(id)
     }
-  }, [id, textToDisplay, data.videoUrl, showContent, clearContent])
+  }, [id, textToDisplay, isGenerated, isSubmitting, data.videoUrl, showContent, clearContent])
   
   // This node outputs a video
   const outputVideoUrl = data.videoUrl || "/akira-animation.gif" // Use a placeholder video if none available

@@ -78,7 +78,7 @@ interface FlowchartState {
   setCanvasContainerRef: (ref: RefObject<HTMLDivElement> | null) => void
 
   // New function to create a render node
-  createRenderNode: (sourceNodeId: string) => string
+  createRenderNode: (sourceNodeId: string, requestId?: string) => string
 }
 
 export const useFlowchartStore = create<FlowchartState>()(
@@ -104,24 +104,62 @@ export const useFlowchartStore = create<FlowchartState>()(
 
         // Data propagation functions
         propagateNodeData: (sourceNode, targetNode, targetHandle) => {
-          const newData = { ...targetNode.data }; // Clone data object
+          const newData = { ...targetNode.data }; // Clone data
           let didUpdate = false;
 
-          const isImageSource = sourceNode.type === "image" || sourceNode.type === "text-to-image" || sourceNode.type === "image-to-image";
-          const isTextSource = sourceNode.type === "text";
+          // Get the source node type and data
+          const sourceNodeType = sourceNode.type as string;
+          const sourceNodeData = sourceNode.data || {};
 
+          // Handle source node content propagation
+          const isImageSource = sourceNodeType === "image" || sourceNodeType === "text-to-image" || sourceNodeType === "image-to-image";
+          const isTextSource = sourceNodeType === "text";
+          const isVideoSource = sourceNodeType === "text-to-video" || sourceNodeType === "image-to-video";
+
+          // Special case for Render nodes - they need both image and text data
+          if (targetNode.type === "render") {
+            console.log(`[FlowchartStore] Propagating data to render node ${targetNode.id} from ${sourceNodeType}`);
+            console.log(`[FlowchartStore] Source node data:`, sourceNodeData);
+            
+            // For image sources, propagate image URL
+            if (isImageSource && sourceNodeData.imageUrl) {
+              console.log(`[FlowchartStore] Propagating image to render: ${sourceNodeData.imageUrl}`);
+              newData.sourceImageUrl = sourceNodeData.imageUrl;
+              didUpdate = true;
+            }
+            
+            // For text sources, propagate text content  
+            if (isTextSource && sourceNodeData.content) {
+              console.log(`[FlowchartStore] Propagating text to render: ${sourceNodeData.content}`);
+              newData.sourceNodeContent = sourceNodeData.content;
+              didUpdate = true;
+            }
+            
+            // For video sources, propagate video URL
+            if (isVideoSource && sourceNodeData.videoUrl) {
+              console.log(`[FlowchartStore] Propagating video to render: ${sourceNodeData.videoUrl}`);
+              newData.sourceVideoUrl = sourceNodeData.videoUrl;
+              didUpdate = true;
+            }
+            
+            console.log(`[FlowchartStore] Updated render node data:`, newData);
+            
+            return {
+              targetNode: { ...targetNode, data: newData },
+              didUpdate
+            };
+          }
+
+          // Original propagation logic for other nodes
           if (isImageSource && targetHandle === 'image') {
-            // Replace existing image connection implicitly
-            newData.sourceImageUrl = sourceNode.data?.imageUrl || null;
+            newData.sourceImageUrl = sourceNodeData.imageUrl || null;
             didUpdate = true;
           } else if (isTextSource && targetHandle === 'text') {
-            // Replace existing text connection implicitly
-            newData.sourceNodeContent = sourceNode.data?.content || '';
+            newData.sourceNodeContent = sourceNodeData.content || null;
             didUpdate = true;
           }
 
-          // Return updated node and a flag indicating if any updates were made
-          return { 
+          return {
             targetNode: { ...targetNode, data: newData },
             didUpdate
           };
@@ -446,6 +484,21 @@ export const useFlowchartStore = create<FlowchartState>()(
             if (sourceNode && targetNodeIndex !== -1) {
               const targetNode = updatedNodes[targetNodeIndex];
               
+              // Special handling for render nodes to ensure proper connection
+              if (targetNode.type === 'render') {
+                // For render nodes, ensure we use the correct target handle based on source type
+                if (!connection.targetHandle) {
+                  const sourceType = sourceNode.type;
+                  if (sourceType === 'text-to-video' || sourceType === 'image-to-video') {
+                    connection.targetHandle = 'video';
+                  } else {
+                    connection.targetHandle = 'image';
+                  }
+                  
+                  console.log(`[FlowchartStore] Auto-selecting targetHandle=${connection.targetHandle} for render node`);
+                }
+              }
+              
               // Find and remove any existing edges of the same type to this target
               const existingEdges = updatedEdges.filter(edge => 
                 edge.target === connection.target && 
@@ -570,7 +623,7 @@ export const useFlowchartStore = create<FlowchartState>()(
         setCanvasContainerRef: (ref) => set({ canvasContainerRef: ref }),
 
         // Create a render node connected to the source node
-        createRenderNode: (sourceNodeId) => {
+        createRenderNode: (sourceNodeId: string, requestId?: string) => {
           // Get the source node
           const sourceNode = get().nodes.find(node => node.id === sourceNodeId);
           if (!sourceNode) return "";
@@ -596,19 +649,37 @@ export const useFlowchartStore = create<FlowchartState>()(
               title: "Render",
               sourceNodeId: sourceNodeId,
               isNewNode: true,
+              isSubmitted: true, // Automatically submit when created from button
+              hasGenerated: false,
+              requestId: requestId // Add the requestId to node data
             },
             selected: true
           };
           
+          console.log(`[Store] Creating render node with data:`, newNode.data);
+          
           // Create a new edge connecting the source node to the render node
           const sourceHandle = getSourceHandle(sourceNode.type as import("@/types/node-model").NodeCategory);
+          
+          // Make sure to use the correct target handle for the render node
+          let targetHandle: string;
+          
+          // Simplified logic - use only "image" or "video" handles
+          if (sourceHandle === "video" || sourceNode.type === "text-to-video" || sourceNode.type === "image-to-video") {
+            targetHandle = "video"; // Video output goes to video target
+          } else {
+            // All other types go to image
+            targetHandle = "image";
+          }
+          
+          console.log(`[Store] Creating connection from ${sourceNode.type} (${sourceHandle}) to render node with targetHandle=${targetHandle}`);
           
           const newEdge: Edge = {
             id: `edge_${sourceNodeId}_${newNodeId}`,
             source: sourceNodeId,
             sourceHandle: sourceHandle,
             target: newNodeId,
-            targetHandle: sourceHandle,
+            targetHandle: targetHandle,
           };
           
           // Save the current state before operation

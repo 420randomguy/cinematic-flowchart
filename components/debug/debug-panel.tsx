@@ -22,6 +22,7 @@ export default function DebugPanel() {
     falAi: "disconnected",
   })
   const [isClearing, setIsClearing] = useState(false)
+  const [clearSuccess, setClearSuccess] = useState(false)
   
   // Get nodes from store
   const nodes = useFlowchartStore(state => state.nodes)
@@ -61,6 +62,7 @@ export default function DebugPanel() {
 
   const handleClearCache = () => {
     setIsClearing(true)
+    setClearSuccess(false)
 
     // Simulate clearing cache
     setTimeout(() => {
@@ -70,12 +72,16 @@ export default function DebugPanel() {
         console.log("Cleared all localStorage items");
 
         setIsClearing(false)
-
-        // Show success message
-        alert("All application data cleared successfully")
+        
+        // Show success message in UI instead of an alert
+        setClearSuccess(true)
+        
+        // Auto-hide success message after 3 seconds
+        setTimeout(() => {
+          setClearSuccess(false)
+        }, 3000)
       } catch (error) {
         console.error("Error clearing localStorage:", error);
-        alert("Error clearing cache. See console for details.");
         setIsClearing(false)
       }
     }, 1000)
@@ -180,25 +186,32 @@ export default function DebugPanel() {
             <div className="border-t border-gray-800 my-2"></div>
 
             {/* Clear Cache Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearCache}
-              disabled={isClearing}
-              className="w-full h-7 text-[10px] bg-gray-900 border-gray-800 hover:bg-gray-800 text-gray-300"
-            >
-              {isClearing ? (
-                <>
-                  <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
-                  Clearing...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-3 w-3 mr-1.5" />
-                  Clear Cache
-                </>
-              )}
-            </Button>
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearCache}
+                disabled={isClearing || clearSuccess}
+                className="w-full h-7 text-[10px] bg-gray-900 border-gray-800 hover:bg-gray-800 text-gray-300"
+              >
+                {isClearing ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1.5 animate-spin" />
+                    Clearing...
+                  </>
+                ) : clearSuccess ? (
+                  <>
+                    <Trash2 className="h-3 w-3 mr-1.5 text-green-500" />
+                    Cleared Successfully
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3 w-3 mr-1.5" />
+                    Clear Cache
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Add a section to show text content propagation debug info */}

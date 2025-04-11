@@ -45,14 +45,15 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
       showContent(id, { text: textToDisplay })
     }
     
-    if (data.imageUrl) {
-      showContent(id, { imageUrl: data.imageUrl })
+    // Show placeholder or actual image
+    if (isGenerated && !isSubmitting) {
+      showContent(id, { imageUrl: data.imageUrl || "/sample-image.png" })
     }
     
     return () => {
       clearContent(id)
     }
-  }, [id, textToDisplay, data.imageUrl, showContent, clearContent])
+  }, [id, textToDisplay, isGenerated, isSubmitting, data.imageUrl, showContent, clearContent])
   
   // The output image URL
   const outputImageUrl = data.imageUrl || null

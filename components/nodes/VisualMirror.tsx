@@ -93,15 +93,11 @@ VisualMirrorText.displayName = "VisualMirrorText"
 // Render node variant - for displaying generation progress and results
 export const VisualMirrorRender = memo(({ 
   nodeId, 
-  isSubmitting = false, 
-  timeRemaining = 0,
   showCompletionBadge = false,
   showControls = false,
   isFullscreen = false
 }: { 
   nodeId: string, 
-  isSubmitting?: boolean, 
-  timeRemaining?: number,
   showCompletionBadge?: boolean,
   showControls?: boolean,
   isFullscreen?: boolean
@@ -110,6 +106,8 @@ export const VisualMirrorRender = memo(({
   const { visibleContent } = useVisualMirrorStore()
   const visualData = visibleContent[nodeId] || {}
   const hasContent = !!visualData.imageUrl
+  const isGenerating = !!visualData.isGenerating
+  const timeRemaining = visualData.timeRemaining || 0
   
   // Determine if this is a video content (check file extension)
   const isVideo = hasContent && (
@@ -120,20 +118,20 @@ export const VisualMirrorRender = memo(({
   
   return (
     <div className="relative w-full h-full flex items-center justify-center">
-      {/* Only show generating UI when submitting */}
-      {isSubmitting ? (
-        <div className="flex flex-col items-center justify-center p-4 min-h-[120px] w-full">
-          <div className="text-[11px] text-gray-400 text-center mb-3">Generating...</div>
-          <div className="text-[10px] text-gray-500 text-center mb-2">Est. time: {timeRemaining}s</div>
-          <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-yellow-600/50 transition-all duration-1000 ease-linear" 
-              style={{ width: `${(5 - timeRemaining) * 20}%` }}
-            ></div>
+      {/* Only show generating UI when in generating state */}
+      {isGenerating ? (
+        <div className="relative w-full h-full min-h-[120px] flex items-center justify-center">
+          {/* Animated gradient background fills the entire container */}
+          <div className="generating-gradient"></div>
+          
+          {/* Text overlay centered */}
+          <div className="relative z-10 px-4 py-2">
+            <div className="text-[11px] text-gray-400 text-center mb-3">Generating...</div>
+            <div className="text-[10px] text-gray-500 text-center">Est. time: {timeRemaining}s</div>
           </div>
         </div>
       ) : (
-        /* When we're not submitting, show the content */
+        /* When we're not generating, show the content */
         <div className="relative w-full h-full min-h-[120px]">
           {hasContent && (
             <div className={`w-full h-full overflow-hidden ${isVideo && !isFullscreen ? 'aspect-video' : ''}`}>

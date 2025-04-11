@@ -22,12 +22,10 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
   const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
   const nodes = useFlowchartStore((state) => state.nodes)
   const edges = useFlowchartStore((state) => state.edges)
-  const { showContent, visibleContent } = useVisualMirrorStore()
+  const { visibleContent, startGeneration, updateGenerationTime, completeGeneration } = useVisualMirrorStore()
   
   // States
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGenerated, setIsGenerated] = useState(!!data.hasGenerated)
-  const [timeRemaining, setTimeRemaining] = useState(5)
   
   // Check if connected to an output-producing node
   const { isConnectedToOutput, sourceNodeType } = useMemo(() => {
@@ -59,17 +57,20 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
   // Get content URL from VisualMirrorStore
   const currentContent = visibleContent[id]
   const contentUrl = currentContent?.imageUrl
+  const isGenerating = currentContent?.isGenerating || false
   
   // Handle submit
   const handleSubmit = useCallback(() => {
-    if (!isSubmitting && !isGenerated) {
-      setIsSubmitting(true)
+    if (!isGenerating && !isGenerated) {
+      // Start generation in VisualMirror store
+      startGeneration(id)
       
-      // 5 second countdown
+      // 5 second countdown handled by the store
       let time = 5
       const interval = setInterval(() => {
         time--
-        setTimeRemaining(time)
+        // Update time remaining in the store
+        updateGenerationTime(id, time)
         
         if (time <= 0) {
           clearInterval(interval)
@@ -79,8 +80,8 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
             ? "/testvideo.mp4"
             : "/testimage.jpg";
           
-          // Update content in VisualMirror store
-          showContent(id, { imageUrl: contentUrl })
+          // Update content in VisualMirror store and mark generation as complete
+          completeGeneration(id, { imageUrl: contentUrl })
           
           // Update node data to remember that generation has occurred
           useFlowchartStore.getState().setNodes(nodes => 
@@ -97,25 +98,20 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
           
           // Set isGenerated flag
           setIsGenerated(true)
-          
-          // Keep isSubmitting state much longer (5 seconds)
-          setTimeout(() => {
-            setIsSubmitting(false)
-          }, 5000);
         }
       }, 1000)
       
       return () => clearInterval(interval)
     }
-  }, [isSubmitting, isGenerated, isVideoContent, id, showContent])
+  }, [isGenerating, isGenerated, isVideoContent, id, startGeneration, updateGenerationTime, completeGeneration])
   
   // Listen for isSubmitted flag changes from the submit button
   useEffect(() => {
     // Auto-trigger generation when node is connected to a source node and has been submitted
-    if (isConnectedToOutput && data.isSubmitted && !isSubmitting && !isGenerated) {
+    if (isConnectedToOutput && data.isSubmitted && !isGenerating && !isGenerated) {
       handleSubmit()
     }
-  }, [data, isConnectedToOutput, handleSubmit, isSubmitting, isGenerated])
+  }, [data, isConnectedToOutput, handleSubmit, isGenerating, isGenerated])
   
   // Sync with data.hasGenerated
   useEffect(() => {
@@ -164,9 +160,7 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
             <>
               <VisualMirrorRender 
                 nodeId={id} 
-                isSubmitting={isSubmitting} 
-                timeRemaining={timeRemaining}
-                showCompletionBadge={isGenerated && !isSubmitting}
+                showCompletionBadge={isGenerated && !isGenerating}
                 showControls={false}
               />
               

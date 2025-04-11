@@ -642,3 +642,22 @@ textarea:not(.spellcheck-enabled)::spelling-error {
   text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
+/* Animation for gradient background in loading state */
+@keyframes gradientMove {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+.generating-gradient {
+  background: linear-gradient(to right, rgba(80, 80, 80, 0.05), rgba(120, 120, 120, 0.1) 50%, rgba(80, 80, 80, 0.05) 100%);
+  background-size: 200% 100%;
+  animation: gradientMove 2s linear infinite;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+

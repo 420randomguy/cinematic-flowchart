@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
-import { User, LogIn, Key, X } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { User, Key, X, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,33 +15,75 @@ export default function UserProfileButton() {
   const [password, setPassword] = useState("")
   const [apiKey, setApiKey] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [loginError, setLoginError] = useState("")
   const buttonRef = useRef<HTMLButtonElement>(null)
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const savedLoginState = localStorage.getItem("isLoggedIn")
+    if (savedLoginState === "true") {
+      setIsLoggedIn(true)
+    }
+    
+    const savedApiKey = localStorage.getItem("fal_ai_key") || ""
+    setApiKey(savedApiKey)
+  }, [])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
-    // Simulate login - in a real app, this would call an API
+    setLoginError("")
+    
+    // For testing: Accept "test@test.com"/"test" or any email with "test" password
     setTimeout(() => {
-      setIsLoggedIn(true)
-      setIsLoading(false)
-    }, 1000)
+      if (password === "test" && (email === "test@test.com" || email.includes("test"))) {
+        setIsLoggedIn(true)
+        localStorage.setItem("isLoggedIn", "true")
+        setIsLoading(false)
+      } else {
+        setLoginError("Invalid credentials. Try test@test.com/test")
+        setIsLoading(false)
+      }
+    }, 800)
   }
 
   const handleSaveApiKey = (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setSaveSuccess(false)
 
-    // Simulate saving API key - in a real app, this would call an API
-    setTimeout(() => {
+    try {
+      // Save API key to localStorage
+      localStorage.setItem("fal_ai_key", apiKey)
+      
+      // Show success feedback
       setIsLoading(false)
-      setIsOpen(false)
-    }, 1000)
+      setSaveSuccess(true)
+      
+      // Auto-hide success message and close panel after 1.5 seconds
+      setTimeout(() => {
+        setSaveSuccess(false)
+        setIsOpen(false)
+      }, 1500)
+    } catch (error) {
+      console.error("Error saving API key:", error)
+      setIsLoading(false)
+    }
+  }
+
+  const handleClearApiKey = () => {
+    localStorage.removeItem("fal_ai_key")
+    setApiKey("")
+    setSaveSuccess(false)
   }
 
   const handleLogout = () => {
     setIsLoggedIn(false)
-    setApiKey("")
+    localStorage.removeItem("isLoggedIn")
+    setEmail("")
+    setPassword("")
+    setIsOpen(false)
   }
 
   return (
@@ -61,7 +103,7 @@ export default function UserProfileButton() {
           className="absolute top-14 right-4 z-50 bg-black border border-gray-800/50 rounded-sm p-4 shadow-lg w-72 font-mono text-white user-profile-dropdown"
         >
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium">{isLoggedIn ? "API Settings" : "Login"}</h3>
+            <h3 className="text-sm font-medium">{isLoggedIn ? "API Settings" : "Sign In"}</h3>
             <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-6 w-6">
               <X className="h-4 w-4" />
             </Button>
@@ -87,9 +129,6 @@ export default function UserProfileButton() {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Enter your fal.ai API key"
                     className="bg-black border-gray-800 text-white text-xs h-8"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.stopPropagation()}
                   />
                 </div>
                 <p className="text-xs text-gray-500">Your API key is stored locally and never sent to our servers.</p>
@@ -102,14 +141,18 @@ export default function UserProfileButton() {
                   onClick={handleLogout}
                   className="bg-transparent border-gray-800 text-gray-300 hover:bg-gray-800 text-xs h-8"
                 >
-                  Logout
+                  Sign Out
                 </Button>
                 <Button
                   type="submit"
                   disabled={!apiKey || isLoading}
-                  className="bg-gray-800 hover:bg-gray-700 text-white text-xs h-8"
+                  className={`${
+                    saveSuccess 
+                      ? "bg-green-700 hover:bg-green-600" 
+                      : "bg-gray-800 hover:bg-gray-700"
+                  } text-white text-xs h-8`}
                 >
-                  {isLoading ? "Saving..." : "Save API Key"}
+                  {isLoading ? "Saving..." : saveSuccess ? "Saved!" : "Save API Key"}
                 </Button>
               </div>
             </form>
@@ -120,44 +163,39 @@ export default function UserProfileButton() {
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
+              {loginError && (
+                <div className="text-xs text-red-400 bg-red-900/20 border border-red-900/50 p-2 rounded-sm">
+                  {loginError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm text-gray-300">
                   Email
                 </Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="bg-black border-gray-800 text-white text-xs h-8"
-                    required
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                  />
-                </div>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="test@test.com"
+                  className="bg-black border-gray-800 text-white text-xs h-8"
+                  required
+                />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm text-gray-300">
                   Password
                 </Label>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="bg-black border-gray-800 text-white text-xs h-8"
-                    required
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                  />
-                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="test"
+                  className="bg-black border-gray-800 text-white text-xs h-8"
+                  required
+                />
               </div>
 
               <Button
@@ -165,9 +203,13 @@ export default function UserProfileButton() {
                 disabled={!email || !password || isLoading}
                 className="w-full bg-gray-800 hover:bg-gray-700 text-white text-xs h-8"
               >
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? "Signing in..." : "Sign In"}
                 <LogIn className="ml-2 h-4 w-4" />
               </Button>
+              
+              <p className="text-xs text-gray-500 text-center">
+                For testing, use: test@test.com / test
+              </p>
             </form>
           )}
         </div>

@@ -31,6 +31,7 @@ import CanvasContextMenu from "@/components/canvas/CanvasContextMenu"
 import CanvasToolbar from "@/components/controls/CanvasToolbar"
 import ImageCropModal from "@/components/modals/ImageCropModal"
 import DebugPanel from "@/components/debug/debug-panel"
+import UserProfileButton from "@/components/ui/user-profile-button"
 
 // Import stores
 import { useFlowchartStore } from "@/store/useFlowchartStore"
@@ -803,6 +804,9 @@ function FlowchartCanvasInner() {
           onCancel={() => {}}
         />
       )}
+
+      {/* User Profile Button */}
+      <UserProfileButton />
 
       {/* Debug Panel */}
       <DebugPanel />

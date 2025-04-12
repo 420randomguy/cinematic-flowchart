@@ -7,6 +7,7 @@ import { useFlowchartStore } from "@/store/useFlowchartStore"
 const setIsInteractingWithInputSelector = (state: any) => state.setIsInteractingWithInput
 const updateNodeQualitySelector = (state: any) => state.updateNodeQuality
 const updateNodeStrengthSelector = (state: any) => state.updateNodeStrength
+const updateNodeNumbersSelector = (state: any) => state.updateNodeNumbers
 const updateNodeModelSelector = (state: any) => state.updateNodeModel
 const updateNodeModelSettingsSelector = (state: any) => state.updateNodeModelSettings
 
@@ -24,6 +25,7 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
   const setIsInteractingWithInput = useFlowchartStore(setIsInteractingWithInputSelector)
   const updateNodeQuality = useFlowchartStore(updateNodeQualitySelector)
   const updateNodeStrength = useFlowchartStore(updateNodeStrengthSelector)
+  const updateNodeNumbers = useFlowchartStore(updateNodeNumbersSelector)
   const updateNodeModel = useFlowchartStore(updateNodeModelSelector)
   const updateNodeModelSettings = useFlowchartStore(updateNodeModelSettingsSelector)
   
@@ -48,6 +50,10 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
   const setStrength = useCallback((strength: number) => {
     updateNodeStrength(id, strength);
   }, [id, updateNodeStrength]);
+  
+  const setNumbers = useCallback((numbers: string | number) => {
+    updateNodeNumbers(id, numbers);
+  }, [id, updateNodeNumbers]);
   
   const handleModelChange = useCallback((modelId: string) => {
     console.log(`[useNodeState] Changing model for node ${id} to: ${modelId}`);
@@ -89,6 +95,8 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
     quality: data.quality || 80,
     setQuality,
     seed: data.seed || Math.floor(Math.random() * 1000000000).toString(),
+    numbers: data.numbers || data.seed || Math.floor(Math.random() * 1000000000).toString(), 
+    setNumbers,
     isNewNode: data.isNewNode || false,
     isSubmitting,
     timeRemaining,

@@ -68,11 +68,12 @@ export interface NodeContentProps {
  */
 export interface NodeSettingsProps {
   // Quality settings
-  quality: number
+  slider: number
   setQuality: (quality: number) => void
 
-  // Seed settings
-  seed: string | number
+  // Numbers settings (formerly Seed)
+  numbers: string | number
+  setNumbers?: (numbers: string | number) => void
 
   // Strength settings (for image-to-image)
   strength?: number

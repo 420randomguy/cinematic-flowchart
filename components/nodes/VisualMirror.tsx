@@ -19,11 +19,11 @@ function VisualMirrorComponent({ nodeId, type = "both", hidePrompt = false }: Vi
   // Image-only rendering
   if (type === "image") {
     return visualData.imageUrl ? (
-      <div className="w-full h-full overflow-hidden">
+      <div className="w-full overflow-hidden">
         <img 
           src={visualData.imageUrl} 
           alt="Preview" 
-          className="object-cover w-full h-full" 
+          className="w-full h-auto" 
         />
       </div>
     ) : (
@@ -57,11 +57,11 @@ function VisualMirrorComponent({ nodeId, type = "both", hidePrompt = false }: Vi
       )}
       
       {visualData && visualData.imageUrl ? (
-        <div className="w-full h-full overflow-hidden">
+        <div className="w-full overflow-hidden">
           <img 
             src={visualData.imageUrl} 
             alt="Preview" 
-            className="object-cover w-full h-full" 
+            className="w-full h-auto" 
           />
         </div>
       ) : (
@@ -134,20 +134,20 @@ export const VisualMirrorRender = memo(({
         /* When we're not generating, show the content */
         <div className="relative w-full h-full min-h-[120px]">
           {hasContent && (
-            <div className={`w-full h-full overflow-hidden ${isVideo && !isFullscreen ? 'aspect-video' : ''}`}>
+            <div className={`w-full h-full overflow-hidden flex items-center justify-center`}>
               {isVideo ? (
                 <video 
                   src={visualData.imageUrl} 
                   controls={showControls}
                   autoPlay
                   loop
-                  className={`object-contain w-full ${isFullscreen ? 'h-auto max-h-[85vh]' : 'h-full max-h-[200px]'}`}
+                  className={`${isFullscreen ? 'max-w-[85vw] max-h-[85vh]' : 'w-full h-auto'}`}
                 />
               ) : (
                 <img 
                   src={visualData.imageUrl} 
                   alt="Preview" 
-                  className={`object-contain w-full ${isFullscreen ? 'h-auto max-h-[85vh]' : 'h-full max-h-[200px]'}`}
+                  className={`${isFullscreen ? 'max-w-[85vw] max-h-[85vh]' : 'w-full h-auto'}`}
                 />
               )}
             </div>

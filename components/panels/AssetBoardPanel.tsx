@@ -113,18 +113,18 @@ export default function AssetBoardPanel() {
         onDragStart={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset)}
         onClick={() => handleSelectAsset(asset)}
       >
-        <div className="aspect-video bg-black node-gradient rounded-xl overflow-hidden border border-gray-800/50 hover:border-gray-600/50 transition-colors">
+        <div className="bg-black node-gradient rounded-xl overflow-hidden border border-gray-800/50 hover:border-gray-600/50 transition-colors">
           {asset.type === "image" ? (
             <img
               src={asset.url || "/placeholder.svg"}
               alt={asset.title || `Asset ${index}`}
-              className="w-full h-full object-contain"
+              className="w-full h-auto"
               loading="lazy"
             />
           ) : (
             <video
               src={asset.url}
-              className="w-full h-full object-contain"
+              className="w-full h-auto"
               muted
               loop
               preload="metadata"

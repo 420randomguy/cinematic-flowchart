@@ -43,6 +43,8 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     quality,
     setQuality,
     seed,
+    numbers,
+    setNumbers,
     isSubmitting,
     isGenerated,
     timeRemaining,
@@ -72,7 +74,7 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
   })
 
   // Determine the text content to display directly from props.data
-  const textToDisplay = data.sourceNodeContent || data.content || ""
+  const textToDisplay = (data as any).sourceNodeContent || data.content || ""
 
   // Determine if we have a source image to use
   const sourceImageUrlToDisplay = data.sourceImageUrl || data.imageUrl || null
@@ -138,11 +140,13 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
             isDragging
           }}
           settingsProps={{
-            quality,
+            slider: quality,
             setQuality,
-            seed,
+            numbers,
+            setNumbers,
             selectedModelId,
             modelSettings,
+            handleModelChange,
             handleSettingsChange,
           }}
         >

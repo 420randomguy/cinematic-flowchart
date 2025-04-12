@@ -22,6 +22,8 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
     quality,
     setQuality,
     seed,
+    numbers,
+    setNumbers,
     isSubmitting,
     isGenerated,
     timeRemaining,
@@ -93,11 +95,13 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
           category: "text-to-image"
         }}
         settingsProps={{
-          quality,
+          slider: quality,
           setQuality,
-          seed,
+          numbers,
+          setNumbers,
           selectedModelId,
           modelSettings,
+          handleModelChange,
           handleSettingsChange,
         }}
       >

@@ -72,6 +72,7 @@ interface FlowchartState {
   // Node state management
   updateNodeQuality: (nodeId: string, quality: number) => void
   updateNodeStrength: (nodeId: string, strength: number) => void
+  updateNodeNumbers: (nodeId: string, numbers: string | number) => void
   updateNodeModel: (nodeId: string, modelId: string) => void
   updateNodeModelSettings: (nodeId: string, settings: Record<string, any>) => void
   updateNodeContent: (nodeId: string, content: string) => void
@@ -303,6 +304,16 @@ export const useFlowchartStore = create<FlowchartState>()(
             nodes: state.nodes.map(node => 
               node.id === nodeId 
                 ? { ...node, data: { ...node.data, strength } } 
+                : node
+            )
+          }));
+        },
+        
+        updateNodeNumbers: (nodeId, numbers) => {
+          set((state) => ({
+            nodes: state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, data: { ...node.data, numbers } } 
                 : node
             )
           }));

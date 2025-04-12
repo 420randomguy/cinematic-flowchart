@@ -18,6 +18,8 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
     quality,
     setQuality,
     seed,
+    numbers,
+    setNumbers,
     isSubmitting,
     isGenerated,
     timeRemaining,
@@ -29,7 +31,7 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
   } = useNodeState({
     id,
     data,
-    initialModelId: "wan-pro",
+    initialModelId: "wan-2.1",
   })
 
   // Determine the text content to display directly from props.data
@@ -92,11 +94,13 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
           category: "text-to-video"
         }}
         settingsProps={{
-          quality,
+          slider: quality,
           setQuality,
-          seed,
+          numbers,
+          setNumbers,
           selectedModelId,
           modelSettings,
+          handleModelChange,
           handleSettingsChange,
         }}
       >

@@ -32,7 +32,7 @@ function ModelSelectorComponent({
   const [selectedModel, setSelectedModel] = useState(getVideoModelById(selectedModelId))
 
   useEffect(() => {
-    setSelectedModel(getVideoModelById(selectedModelId) || null)
+    setSelectedModel(getVideoModelById(selectedModelId))
   }, [selectedModelId])
 
   const handleSettingChange = useCallback(
@@ -55,7 +55,7 @@ function ModelSelectorComponent({
               onValueChange={(value) => handleSettingChange(key, value)}
               {...interactiveProps}
             >
-              <SelectTrigger className="h-5 w-[80px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0">
+              <SelectTrigger className="h-5 w-[80px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0 focus:ring-0 focus:outline-none focus:border-gray-700 focus:shadow-none focus-visible:ring-0 focus-visible:ring-offset-0">
                 <SelectValue placeholder={String(setting[0])} />
               </SelectTrigger>
               <SelectContent className="bg-gray-900 border-gray-800 text-[9px] p-0 rounded-sm">
@@ -63,7 +63,7 @@ function ModelSelectorComponent({
                   <SelectItem
                     key={String(option)}
                     value={String(option)}
-                    className="text-[9px] py-1 px-2 text-gray-300"
+                    className="text-[9px] py-1 px-2 text-gray-300 focus:bg-gray-800 focus:text-gray-300 focus:ring-0 focus:outline-none"
                     {...interactiveProps}
                   >
                     {String(option)}
@@ -103,7 +103,10 @@ function ModelSelectorComponent({
         <div className="flex justify-between items-center">
           <div className="text-[9px] uppercase text-gray-500 tracking-wide">Model</div>
           <Select value={selectedModelId} onValueChange={onModelChange} {...interactiveProps}>
-            <SelectTrigger className="h-5 w-[80px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0">
+            <SelectTrigger
+              className="h-5 w-[80px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0 focus:ring-0 focus:outline-none focus:border-gray-700 focus:shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              {...interactiveProps}
+            >
               <SelectValue placeholder="Select model" />
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-800 text-[9px] p-0 rounded-sm">
@@ -111,7 +114,7 @@ function ModelSelectorComponent({
                 <SelectItem
                   key={model.id}
                   value={model.id}
-                  className="text-[9px] py-1 px-2 text-gray-300"
+                  className="text-[9px] py-1 px-2 text-gray-300 focus:bg-gray-800 focus:text-gray-300 focus:ring-0 focus:outline-none"
                   {...interactiveProps}
                 >
                   {model.name}

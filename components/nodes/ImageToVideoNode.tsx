@@ -38,6 +38,8 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
     quality,
     setQuality,
     seed,
+    numbers,
+    setNumbers,
     isSubmitting,
     isGenerated,
     timeRemaining,
@@ -49,7 +51,7 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
   } = useNodeState({
     id,
     data,
-    initialModelId: "wan-pro",
+    initialModelId: "wan-2.1",
   })
 
   // Use our consolidated image handling hook
@@ -137,11 +139,13 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
           isDragging
         }}
         settingsProps={{
-          quality,
+          slider: quality,
           setQuality,
-          seed,
+          numbers,
+          setNumbers,
           selectedModelId,
           modelSettings,
+          handleModelChange,
           handleSettingsChange,
         }}
       >

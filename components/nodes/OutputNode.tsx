@@ -5,6 +5,7 @@ import type { NodeProps } from "reactflow"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { SubmitButton } from "@/components/ui/submit-button"
+import { useNodeState } from "@/hooks/useNodeState"
 
 interface OutputNodeData {
   title?: string
@@ -12,6 +13,22 @@ interface OutputNodeData {
 
 function OutputNode({ data, isConnectable, id }: NodeProps<OutputNodeData>) {
   const setIsInteractingWithInput = useFlowchartStore((state) => state.setIsInteractingWithInput)
+  
+  // Use the node state hook for managing state
+  const {
+    quality,
+    setQuality,
+    numbers,
+    setNumbers,
+    selectedModelId,
+    handleModelChange,
+    modelSettings,
+    handleSettingsChange,
+  } = useNodeState({
+    id,
+    data,
+    initialModelId: "",
+  })
   
   // Render the Output node with a submit button
   return (
@@ -30,6 +47,17 @@ function OutputNode({ data, isConnectable, id }: NodeProps<OutputNodeData>) {
         isConnectable={isConnectable}
         contentProps={{
           handleSubmitToggle: true // This will trigger the SubmitButton to be rendered
+        }}
+        settingsProps={{
+          slider: quality,
+          setQuality,
+          numbers,
+          setNumbers,
+          selectedModelId,
+          modelSettings,
+          handleModelChange,
+          handleSettingsChange,
+          data
         }}
       >
         <div className="p-2 mt-2 border-t border-gray-800/50">

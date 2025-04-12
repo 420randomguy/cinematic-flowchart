@@ -5,6 +5,8 @@ import { Maximize2, Download } from "lucide-react"
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 import { createInteractiveProps } from "@/lib/utils/node-interaction"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
+import { useImageLibraryStore } from "@/store/useImageLibraryStore"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 import { VisualMirrorRender } from "@/components/nodes/VisualMirror"
 
 interface ActionsSectionProps {
@@ -18,6 +20,8 @@ interface ActionsSectionProps {
 function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", title, nodeId }: ActionsSectionProps) {
   // Use the store directly
   const handleInputInteraction = useFlowchartStore((state) => state.handleInputInteraction)
+  const addAsset = useImageLibraryStore((state) => state.addAsset)
+  const { visibleContent } = useVisualMirrorStore()
   const interactiveProps = createInteractiveProps(handleInputInteraction)
 
   // Use refs to prevent unnecessary rerenders for mutable state
@@ -38,14 +42,41 @@ function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", 
     // Only proceed if we have an image URL
     if (!imageUrlRef.current) return
 
+    // Get content from visual mirror store to determine content type
+    const content = visibleContent[nodeId]
+    const isVideo = showVideo || 
+                   (content?.imageUrl && 
+                    (content.imageUrl.endsWith('.mp4') || 
+                     content.imageUrl.endsWith('.webm') || 
+                     content.imageUrl.endsWith('.gif')))
+
+    // Check if the asset already exists in the library before adding it
+    const savedAssets = useImageLibraryStore.getState().savedAssets
+    const assetExists = savedAssets.some(asset => asset.url === imageUrlRef.current)
+    
+    // Only add to asset library if it doesn't already exist
+    if (!assetExists) {
+      try {
+        addAsset({
+          url: imageUrlRef.current,
+          type: isVideo ? "video" : "image",
+          title: isVideo ? "Downloaded Video" : "Downloaded Image",
+          description: `Downloaded from node ${nodeId}`,
+        })
+        console.log(`[ActionsSection] Added ${isVideo ? "video" : "image"} to asset library`)
+      } catch (error) {
+        console.error("[ActionsSection] Failed to add to asset library:", error)
+      }
+    }
+
     // Create a temporary link element
     const link = document.createElement("a")
     link.href = imageUrlRef.current
-    link.download = `image_${Date.now()}.png`
+    link.download = isVideo ? `video_${Date.now()}.mp4` : `image_${Date.now()}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-  }, [])
+  }, [nodeId, showVideo, addAsset, visibleContent])
 
   // Extract onClick from interactiveProps to avoid conflict
   const { onClick: _ignoredClick, ...safeInteractiveProps } = interactiveProps
@@ -69,7 +100,6 @@ function ActionsSectionComponent({ imageUrl, showVideo = false, className = "", 
               <div className="w-full h-full overflow-hidden">
                 <VisualMirrorRender 
                   nodeId={nodeId} 
-                  isSubmitting={false}
                   showCompletionBadge={false}
                   showControls={true}
                   isFullscreen={true}

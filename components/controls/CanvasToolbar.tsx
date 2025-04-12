@@ -3,6 +3,7 @@
 import { Undo, Redo, Copy, Clipboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import UserProfileButton from "@/components/ui/user-profile-button"
 
 /**
  * CanvasToolbar Props
@@ -43,84 +44,91 @@ export default function CanvasToolbar({
   isPasteAvailable,
 }: CanvasToolbarProps) {
   return (
-    <div className="absolute top-4 right-4 z-10 bg-black/90 p-2 rounded-sm flex gap-2 border border-gray-800/50">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onUndo}
-              disabled={!isUndoAvailable}
-              className={`p-1 rounded-sm h-auto w-auto ${!isUndoAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
-            >
-              <Undo className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Undo (Ctrl+Z)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-10 flex items-center">
+      <div className="bg-black/90 p-2 rounded-sm flex gap-2 border border-gray-800/50">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onUndo}
+                disabled={!isUndoAvailable}
+                className={`p-1 rounded-sm h-auto w-auto ${!isUndoAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
+              >
+                <Undo className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Undo (Ctrl+Z)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onRedo}
-              disabled={!isRedoAvailable}
-              className={`p-1 rounded-sm h-auto w-auto ${!isRedoAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
-            >
-              <Redo className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Redo (Ctrl+Y)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onRedo}
+                disabled={!isRedoAvailable}
+                className={`p-1 rounded-sm h-auto w-auto ${!isRedoAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
+              >
+                <Redo className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Redo (Ctrl+Y)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-      <div className="w-px h-4 bg-gray-700 mx-1"></div>
+        <div className="w-px h-4 bg-gray-700 mx-1"></div>
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onCopy}
-              disabled={!isCopyAvailable}
-              className={`p-1 rounded-sm h-auto w-auto ${!isCopyAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Copy (Ctrl+C)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onCopy}
+                disabled={!isCopyAvailable}
+                className={`p-1 rounded-sm h-auto w-auto ${!isCopyAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Copy (Ctrl+C)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onPaste}
-              disabled={!isPasteAvailable}
-              className={`p-1 rounded-sm h-auto w-auto ${!isPasteAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
-            >
-              <Clipboard className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Paste (Ctrl+V)</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onPaste}
+                disabled={!isPasteAvailable}
+                className={`p-1 rounded-sm h-auto w-auto ${!isPasteAvailable ? "text-gray-600" : "text-gray-300 hover:bg-gray-800"}`}
+              >
+                <Clipboard className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Paste (Ctrl+V)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
+      {/* User Profile Button positioned 15px to the right of toolbar */}
+      <div className="ml-[15px]">
+        <UserProfileButton inToolbar={true} />
+      </div>
     </div>
   )
 }

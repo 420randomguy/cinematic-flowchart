@@ -309,13 +309,40 @@ export const useFlowchartStore = create<FlowchartState>()(
         },
         
         updateNodeModel: (nodeId, modelId) => {
-          set((state) => ({
-            nodes: state.nodes.map(node => 
-              node.id === nodeId 
-                ? { ...node, data: { ...node.data, modelId } } 
-                : node
-            )
-          }));
+          console.log(`[FlowchartStore] Updating node ${nodeId} model to: ${modelId}`);
+          
+          // Save state before making the change 
+          const { isUndoRedoing } = get();
+          if (!isUndoRedoing) {
+            get().saveState();
+          }
+          
+          set((state) => {
+            // Find the node to check if it exists and get its type
+            const node = state.nodes.find(n => n.id === nodeId);
+            if (!node) {
+              console.warn(`[FlowchartStore] Node ${nodeId} not found when updating model`);
+              return state; // Return unchanged state
+            }
+            
+            console.log(`[FlowchartStore] Node ${nodeId} (${node.type}) model updated from ${node.data?.modelId || 'none'} to ${modelId}`);
+            
+            // Update the node's model ID
+            return {
+              nodes: state.nodes.map(node => 
+                node.id === nodeId 
+                  ? { 
+                      ...node, 
+                      data: { 
+                        ...node.data, 
+                        modelId,
+                        _lastModelUpdate: Date.now(), // Add timestamp to force re-renders
+                      } 
+                    } 
+                  : node
+              )
+            };
+          });
         },
         
         updateNodeModelSettings: (nodeId, modelSettings) => {

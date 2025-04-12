@@ -192,12 +192,8 @@ body {
   padding-left: 8px !important;
 }
 
-/* Utility class to prevent node dragging */
-.prevent-node-drag {
-  pointer-events: auto !important;
-}
-
-/* Make sure inputs and textareas inside nodes can be interacted with */
+/* ===== ESSENTIAL NODE DRAGGING SYSTEM ===== */
+/* 1. Make interactive elements always receive events */
 .react-flow__node textarea,
 .react-flow__node input,
 .react-flow__node select,
@@ -206,15 +202,20 @@ body {
 .react-flow__node [role="listbox"],
 .react-flow__node [role="option"] {
   pointer-events: all !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  z-index: 5 !important;
 }
 
-/* Ensure the node itself doesn't receive drag events when interacting with inputs */
+/* 2. Prevent node drag when interacting with focused inputs */
 .react-flow__node:has(textarea:focus),
 .react-flow__node:has(input:focus),
 .react-flow__node:has(select:focus),
 .react-flow__node:has([role="combobox"]:focus-within) {
   pointer-events: none !important;
 }
+
+/* 3. Allow interaction with elements inside node when parent has focus */
 .react-flow__node:has(textarea:focus) *,
 .react-flow__node:has(input:focus) *,
 .react-flow__node:has(select:focus) *,
@@ -222,7 +223,18 @@ body {
   pointer-events: auto !important;
 }
 
-/* Add these styles at the end of the file */
+/* 4. Utility class for elements that should never trigger node drag */
+.prevent-node-drag {
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* 5. Optimize drag performance with hardware acceleration */
+.react-flow__node.dragging {
+  will-change: transform;
+  z-index: 1000 !important;
+}
 
 /* Connection line styling */
 .react-flow__connection-path {
@@ -267,13 +279,6 @@ body {
   z-index: 10 !important;
 }
 
-/* Ensure the prevent-node-drag class works properly */
-.prevent-node-drag {
-  pointer-events: auto !important;
-  user-select: text !important;
-  -webkit-user-select: text !important;
-}
-
 /* Additional styles to ensure clipboard operations work */
 .react-flow__node textarea {
   -webkit-user-select: auto !important;
@@ -313,13 +318,6 @@ body {
 }
 
 /* Add these styles to optimize node dragging */
-
-/* Apply hardware acceleration to dragging nodes */
-.react-flow__node.dragging {
-  will-change: transform;
-  transition: none !important;
-  z-index: 1000 !important;
-}
 
 /* Optimize all nodes for hardware acceleration */
 .react-flow__node {
@@ -564,6 +562,11 @@ Optimize rendering performance
 div[role="dialog"] .node-content-container {
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* Make all dialog content have consistent rounded edges */
+div[role="dialog"] [data-state] {
+  border-radius: 8px !important;
 }
 
 /* ============= Added CSS classes to remove inline styles ============= */

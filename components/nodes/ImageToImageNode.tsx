@@ -54,7 +54,7 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
   } = useNodeState({
     id,
     data,
-    initialModelId: "stable-diffusion-xl",
+    initialModelId: "flux-dev",
   })
 
   // Use image handling hooks

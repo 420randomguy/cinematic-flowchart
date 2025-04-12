@@ -6,6 +6,7 @@ import { Handle, Position } from "reactflow"
 import { BaseNode } from "@/components/nodes/BaseNode"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
 import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
+import { useImageLibraryStore } from "@/store/useImageLibraryStore"
 import { VisualMirrorRender } from "@/components/nodes/VisualMirror"
 import { ActionsSection } from "@/components/nodes/sections/ActionsSection"
 
@@ -25,6 +26,7 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
   const nodes = useFlowchartStore((state) => state.nodes)
   const edges = useFlowchartStore((state) => state.edges)
   const { visibleContent, startGeneration, updateGenerationTime, completeGeneration } = useVisualMirrorStore()
+  const addAsset = useImageLibraryStore((state) => state.addAsset)
   
   // States
   const [isGenerated, setIsGenerated] = useState(!!data.hasGenerated)
@@ -84,6 +86,27 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
           // Update content in VisualMirror store and mark generation as complete
           completeGeneration(id, { imageUrl: contentUrl })
           
+          // Check if an asset with this URL already exists in the library
+          const savedAssets = useImageLibraryStore.getState().savedAssets;
+          const assetExists = savedAssets.some(asset => asset.url === contentUrl);
+          
+          // Only add the asset if it doesn't already exist
+          if (!assetExists) {
+            try {
+              addAsset({
+                url: contentUrl,
+                type: isVideoContent ? "video" : "image",
+                title: isVideoContent ? "Generated Video" : "Generated Image",
+                description: `Generated from ${sourceNode?.type || "unknown"} node`,
+              });
+              console.log(`[RenderNode ${id}] Added ${isVideoContent ? "video" : "image"} to asset library`);
+            } catch (error) {
+              console.error(`[RenderNode ${id}] Failed to add to asset library:`, error);
+            }
+          } else {
+            console.log(`[RenderNode ${id}] Asset already exists in library, skipping addition`);
+          }
+          
           // Update node data to remember that generation has occurred
           useFlowchartStore.getState().setNodes(nodes => 
             nodes.map(node => 
@@ -104,7 +127,7 @@ function RenderNode({ data, isConnectable, id }: NodeProps<RenderNodeData>) {
       
       return () => clearInterval(interval)
     }
-  }, [isGenerating, isGenerated, isVideoContent, id, startGeneration, updateGenerationTime, completeGeneration])
+  }, [isGenerating, isGenerated, isVideoContent, id, startGeneration, updateGenerationTime, completeGeneration, addAsset, sourceNode?.type])
   
   // Listen for isSubmitted flag changes from the submit button
   useEffect(() => {

@@ -13,9 +13,9 @@ import { useMemoization } from "@/hooks/useMemoization"
  * Reusable node settings component for quality, seed, strength, and model settings
  */
 function NodeSettingsComponent({
-  quality,
+  slider,
   setQuality,
-  seed,
+  numbers,
   strength,
   setStrength,
   selectedModelId,
@@ -36,15 +36,15 @@ function NodeSettingsComponent({
   const { nodeSettingsComparison } = useMemoization()
 
   // Use refs to track previous values for memoization
-  const prevQualityRef = useRef(quality)
+  const prevSliderRef = useRef<number>(slider || 0)
   const prevStrengthRef = useRef(strength)
-  const prevSeedRef = useRef(seed)
+  const prevNumbersRef = useRef<string | number>(numbers || "0")
   const prevModelIdRef = useRef(selectedModelId)
 
   // Only update refs when values actually change
-  if (quality !== prevQualityRef.current) prevQualityRef.current = quality
+  if (slider !== prevSliderRef.current) prevSliderRef.current = slider || 0
   if (strength !== prevStrengthRef.current) prevStrengthRef.current = strength
-  if (seed !== prevSeedRef.current) prevSeedRef.current = seed
+  if (numbers !== prevNumbersRef.current) prevNumbersRef.current = numbers || "0"
   if (selectedModelId !== prevModelIdRef.current) prevModelIdRef.current = selectedModelId
 
   return (
@@ -52,13 +52,13 @@ function NodeSettingsComponent({
       {/* Section heading */}
       <div className="text-[9px] uppercase text-gray-500 tracking-wide font-bold mb-2">MODEL SETTINGS</div>
 
-      {/* Quality slider */}
+      {/* Slider (formerly Quality) */}
       <div className="flex justify-between items-center">
-        <div className="text-[9px] uppercase text-gray-500 tracking-wide">QUALITY</div>
-        <div className="text-[9px] text-gray-400">{prevQualityRef.current}</div>
+        <div className="text-[9px] uppercase text-gray-500 tracking-wide">SLIDER</div>
+        <div className="text-[9px] text-gray-400">{prevSliderRef.current}</div>
       </div>
       <Slider
-        value={[prevQualityRef.current]}
+        value={[prevSliderRef.current]}
         min={1}
         max={100}
         step={1}
@@ -86,16 +86,16 @@ function NodeSettingsComponent({
         </>
       )}
 
-      {/* Seed display */}
+      {/* Numbers display (formerly Seed) */}
       <div className="flex justify-between items-center pt-1">
-        <div className="text-[9px] uppercase text-gray-500 tracking-wide">SEED</div>
-        <div className="text-[9px] text-gray-400 font-mono">{prevSeedRef.current}</div>
+        <div className="text-[9px] uppercase text-gray-500 tracking-wide">NUMBERS</div>
+        <div className="text-[9px] text-gray-400 font-mono">{prevNumbersRef.current}</div>
       </div>
 
-      {/* Size selector */}
+      {/* Selectdrop (formerly Size selector) */}
       {showSizeSelector && (
         <div className="flex justify-between items-center pt-1">
-          <div className="text-[9px] uppercase text-gray-500 tracking-wide">SIZE</div>
+          <div className="text-[9px] uppercase text-gray-500 tracking-wide">SELECTDROP</div>
           <Select defaultValue={defaultSize} {...interactiveProps}>
             <SelectTrigger
               className="h-5 w-[60px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0"

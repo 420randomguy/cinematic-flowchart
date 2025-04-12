@@ -91,7 +91,7 @@ export const NODE_MODELS: Record<
       outputsVideo: true,
     },
     defaultSettings: {
-      modelId: "wan-pro",
+      modelId: "wan-2.1",
       quality: 80,
       seed: Math.floor(Math.random() * 1000000000).toString(),
     },
@@ -106,7 +106,7 @@ export const NODE_MODELS: Record<
       outputsVideo: true,
     },
     defaultSettings: {
-      modelId: "wan-pro",
+      modelId: "wan-2.1",
       quality: 80,
       seed: Math.floor(Math.random() * 1000000000).toString(),
     },

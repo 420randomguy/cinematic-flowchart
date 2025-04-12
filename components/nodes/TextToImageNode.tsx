@@ -33,7 +33,7 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
   } = useNodeState({
     id,
     data,
-    initialModelId: "stable-diffusion-xl",
+    initialModelId: "flux-dev",
   })
   
   // Determine the text content to display

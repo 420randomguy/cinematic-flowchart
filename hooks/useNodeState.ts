@@ -50,7 +50,14 @@ export function useNodeState({ id, data, initialModelId }: UseNodeStateProps) {
   }, [id, updateNodeStrength]);
   
   const handleModelChange = useCallback((modelId: string) => {
+    console.log(`[useNodeState] Changing model for node ${id} to: ${modelId}`);
+    
+    // Update the node's model ID in the Flowchart store
     updateNodeModel(id, modelId);
+    
+    // If the node has model-specific settings, we could reset or update them here
+    // For now, let's just log the change
+    console.log(`[useNodeState] Model changed for node ${id}: ${modelId}`);
   }, [id, updateNodeModel]);
   
   const handleSettingsChange = useCallback((settings: any) => {

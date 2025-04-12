@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export default function UserProfileButton() {
+interface UserProfileButtonProps {
+  inToolbar?: boolean;
+}
+
+export default function UserProfileButton({ inToolbar = false }: UserProfileButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [email, setEmail] = useState("")
@@ -93,14 +97,14 @@ export default function UserProfileButton() {
         variant="ghost"
         size="icon"
         onClick={() => setIsOpen(!isOpen)}
-        className="absolute top-4 right-4 z-20 bg-black/80 border border-gray-800 rounded-full h-8 w-8"
+        className={`${inToolbar ? "" : "absolute top-4 right-[calc(15px)]"} z-20 bg-gray-900 border border-gray-800 rounded-full h-10 w-10 shadow-md hover:bg-gray-800`}
       >
-        <User className="h-4 w-4 text-gray-300" />
+        <User className="h-5 w-5 text-gray-300" />
       </Button>
 
       {isOpen && (
         <div
-          className="absolute top-14 right-4 z-50 bg-black border border-gray-800/50 rounded-sm p-4 shadow-lg w-72 font-mono text-white user-profile-dropdown"
+          className={`${inToolbar ? "absolute top-[calc(100%+10px)] right-0" : "absolute top-14 right-[calc(15px)]"} z-50 bg-black border border-gray-800/50 rounded-sm p-4 shadow-lg w-72 font-mono text-white user-profile-dropdown`}
         >
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-medium">{isLoggedIn ? "API Settings" : "Sign In"}</h3>

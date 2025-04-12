@@ -1,17 +1,15 @@
 "use client"
 
 import { useState, useCallback, useMemo } from "react"
-import { FileText, ImageIcon, Video, Wand2, Layers, Plus, X } from "lucide-react"
+import { ImageIcon, Video, X, Plus } from "lucide-react"
 import { useImageLibraryStore } from "@/store/useImageLibraryStore"
+import type { SavedAsset } from "@/store/useImageLibraryStore"
 
 import type React from "react"
 import { Button } from "@/components/ui/button"
-import { Share } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { createLazyComponent } from "@/lib/utils/code-splitting"
-
-// Lazy load the image viewer component
-const ImageViewer = createLazyComponent(() => import("@/components/ui/ImageViewer"))
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { VisualMirrorRender } from "@/components/nodes/VisualMirror"
+import { useVisualMirrorStore } from "@/store/useVisualMirrorStore"
 
 /**
  * AssetBoardPanel Component
@@ -19,74 +17,29 @@ const ImageViewer = createLazyComponent(() => import("@/components/ui/ImageViewe
  * A panel that displays saved assets and allows dragging them onto the canvas
  */
 export default function AssetBoardPanel() {
-  const [activeTab, setActiveTab] = useState<"nodes" | "images" | "videos">("nodes")
-  const [selectedImage, setSelectedImage] = useState<{
-    src: string
-    alt: string
-    title: string
-  } | null>(null)
+  const [activeTab, setActiveTab] = useState<"images" | "videos">("images")
+  const [selectedAsset, setSelectedAsset] = useState<SavedAsset | null>(null)
+  const { showContent } = useVisualMirrorStore()
 
+  // Replace the store access code
   const savedAssets = useImageLibraryStore((state) => state.savedAssets)
   const removeAsset = useImageLibraryStore((state) => state.removeAsset)
-  const savedImages = useImageLibraryStore((state) => state.getSavedImages())
+  
+  // Derive saved images from savedAssets instead of accessing store again
+  const savedImages = useMemo(() => 
+    savedAssets.filter((asset: SavedAsset) => asset.type === "image").map(asset => asset.url), 
+    [savedAssets]
+  )
 
   // Memoize filtered assets to prevent unnecessary filtering on each render
   const filteredAssets = useMemo(() => {
     if (activeTab === "images") {
-      return savedAssets.filter((asset) => asset.type === "image")
+      return savedAssets.filter((asset: SavedAsset) => asset.type === "image")
     } else if (activeTab === "videos") {
-      return savedAssets.filter((asset) => asset.type === "video")
+      return savedAssets.filter((asset: SavedAsset) => asset.type === "video")
     }
     return []
   }, [savedAssets, activeTab])
-
-  // Handle drag start for nodes
-  const handleNodeDragStart = useCallback((event: React.DragEvent<HTMLDivElement>, nodeType: string) => {
-    event.dataTransfer.setData(
-      "application/reactflow",
-      JSON.stringify({
-        type: nodeType,
-        data: {
-          title:
-            nodeType === "text"
-              ? "TEXT TITLE"
-              : nodeType === "text-to-image"
-                ? "TEXT-TO-IMAGE TITLE"
-                : nodeType === "image-to-image"
-                  ? "IMAGE-TO-IMAGE TITLE"
-                  : nodeType === "image"
-                    ? "IMAGE TITLE"
-                    : "VIDEO TITLE",
-          showImage: nodeType !== "text",
-          category: nodeType === "text" ? "text" : nodeType,
-          seed: Math.floor(Math.random() * 1000000000).toString(),
-          content: "",
-          isNewNode: true,
-        },
-      }),
-    )
-    event.dataTransfer.effectAllowed = "move"
-  }, [])
-
-  // Handle drag start for images
-  const handleImageDragStart = useCallback((event: React.DragEvent<HTMLDivElement>, imageUrl: string) => {
-    event.dataTransfer.setData(
-      "application/reactflow",
-      JSON.stringify({
-        type: "image",
-        data: {
-          title: "LIBRARY IMAGE",
-          showImage: true,
-          category: "image",
-          seed: Math.floor(Math.random() * 1000000000).toString(),
-          content: "",
-          imageUrl: imageUrl,
-          isNewNode: true,
-        },
-      }),
-    )
-    event.dataTransfer.effectAllowed = "move"
-  }, [])
 
   // Handle image removal
   const handleRemoveImage = useCallback(
@@ -117,7 +70,7 @@ export default function AssetBoardPanel() {
         },
       }),
     )
-    event.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.effectAllowed = "move"
 
     // Create a drag preview
     const dragPreview = document.createElement("div")
@@ -132,65 +85,80 @@ export default function AssetBoardPanel() {
     }, 0)
   }, [])
 
-  // Render a node item
-  const renderNodeItem = useCallback(
-    (nodeType: string, label: string, icon: React.ReactNode) => (
-      <div
-        className="bg-black border border-gray-800 rounded-sm p-2 flex items-center gap-2 cursor-grab"
-        draggable
-        onDragStart={(e) => handleNodeDragStart(e, nodeType)}
-      >
-        {icon}
-        <span className="text-[10px] text-gray-300">{label}</span>
-      </div>
-    ),
-    [handleNodeDragStart],
-  )
+  const handleSelectAsset = useCallback((asset: SavedAsset) => {
+    setSelectedAsset(asset);
+    
+    // Ensure video URLs have a recognizable extension
+    let contentUrl = asset.url;
+    if (asset.type === 'video' && !contentUrl.match(/\.(mp4|webm|gif)$/i)) {
+      // If it's a video but doesn't have a recognized extension, append one
+      contentUrl += '.mp4';
+    }
+    
+    // Use the VisualMirrorStore to display content
+    showContent('preview_asset', { 
+      imageUrl: contentUrl,
+      text: asset.description || ''
+    });
+  }, [showContent]);
 
   // Render an asset item
   const renderAssetItem = useCallback(
     (asset: any, index: number) => (
       // Replace with standard components
-      <div key={asset.id} className="relative group" draggable onDragStart={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset)}>
-        <div className="aspect-square bg-gray-900 rounded-sm overflow-hidden border border-gray-800">
-          <img
-            src={asset.url || "/placeholder.svg"}
-            alt={asset.title || `Asset ${index}`}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+      <div 
+        key={asset.id} 
+        className="relative group cursor-pointer" 
+        draggable 
+        onDragStart={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset)}
+        onClick={() => handleSelectAsset(asset)}
+      >
+        <div className="aspect-video bg-black node-gradient rounded-xl overflow-hidden border border-gray-800/50 hover:border-gray-600/50 transition-colors">
+          {asset.type === "image" ? (
+            <img
+              src={asset.url || "/placeholder.svg"}
+              alt={asset.title || `Asset ${index}`}
+              className="w-full h-full object-contain"
+              loading="lazy"
+            />
+          ) : (
+            <video
+              src={asset.url}
+              className="w-full h-full object-contain"
+              muted
+              loop
+              preload="metadata"
+            />
+          )}
         </div>
-        <button
-          className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={() => handleRemoveImage(asset.id)}
-        >
-          <X className="h-3 w-3 text-gray-300" />
-        </button>
+        <div className="flex justify-between items-center mt-1">
+          <div className="text-[10px] text-gray-400 truncate pr-2">
+            {asset.title || `${asset.type === "image" ? "Image" : "Video"} ${index + 1}`}
+          </div>
+          <button
+            className="bg-black/70 rounded-full p-0.5 opacity-100 hover:bg-gray-800 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveImage(asset.id);
+            }}
+          >
+            <X className="h-3 w-3 text-gray-300" />
+          </button>
+        </div>
       </div>
     ),
-    [handleDragStart, handleRemoveImage],
+    [handleDragStart, handleRemoveImage, handleSelectAsset],
   )
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col w-[350px] bg-black node-gradient border border-gray-800/50 rounded-xl overflow-hidden" style={{ maxHeight: 'calc(100vh - 30px)' }}>
       {/* Panel header */}
       <div className="flex justify-between items-center p-3 border-b border-gray-800/50">
         <h2 className="text-[11px] font-medium text-gray-300 uppercase tracking-wider">Asset Board</h2>
-        <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-300">
-          <Share className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Tab navigation */}
       <div className="flex border-b border-gray-800/50">
-        <button
-          className={`flex-1 py-2 text-[10px] uppercase tracking-wider ${
-            activeTab === "nodes" ? "text-yellow-500 border-b border-yellow-500" : "text-gray-500"
-          }`}
-          onClick={() => setActiveTab("nodes")}
-        >
-          Nodes
-        </button>
         <button
           className={`flex-1 py-2 text-[10px] uppercase tracking-wider ${
             activeTab === "images" ? "text-yellow-500 border-b border-yellow-500" : "text-gray-500"
@@ -209,68 +177,53 @@ export default function AssetBoardPanel() {
         </button>
       </div>
 
-      {/* Panel content */}
-      <div className="flex-1 overflow-hidden">
-        {/* Nodes tab */}
-        {activeTab === "nodes" && (
-          <div className="p-3 space-y-2">
-            {renderNodeItem("text", "Text", <FileText className="h-4 w-4 text-gray-500" />)}
-            {renderNodeItem("text-to-image", "Text to Image", <Wand2 className="h-4 w-4 text-gray-500" />)}
-            {renderNodeItem("image-to-image", "Image to Image", <Layers className="h-4 w-4 text-gray-500" />)}
-            {renderNodeItem("image", "Image", <ImageIcon className="h-4 w-4 text-gray-500" />)}
-            {renderNodeItem("text-to-video", "Text to Video", <Video className="h-4 w-4 text-gray-500" />)}
-            {renderNodeItem("image-to-video", "Image to Video", <Video className="h-4 w-4 text-gray-500" />)}
-          </div>
-        )}
-
-        {/* Images/Videos tabs with virtualization */}
-        {(activeTab === "images" || activeTab === "videos") && (
-          <>
-            {filteredAssets.length > 0 ? (
-              <div className="p-3 max-h-[400px] overflow-auto">
+      {/* Panel content - make this flex-1 to take remaining height and add overflow-y-auto */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+        {/* Images/Videos tabs */}
+        <>
+          {filteredAssets.length > 0 ? (
+            <div className="p-3">
+              <div className="grid grid-cols-1 gap-3">
                 {filteredAssets.map((asset, index) => renderAssetItem(asset, index))}
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-32 text-center p-3">
-                {activeTab === "images" ? (
-                  <>
-                    <ImageIcon className="h-6 w-6 text-gray-600 mb-2" />
-                    <p className="text-[10px] text-gray-500">No saved images yet</p>
-                  </>
-                ) : (
-                  <>
-                    <Video className="h-6 w-6 text-gray-600 mb-2" />
-                    <p className="text-[10px] text-gray-500">No saved videos yet</p>
-                  </>
-                )}
-                <p className="text-[9px] text-gray-600 mt-1">
-                  {activeTab === "images" ? "Images" : "Videos"} will appear here when you generate them
-                </p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Add asset button */}
-      <div className="p-3 border-t border-gray-800/50">
-        <button className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-sm text-[10px] text-gray-300 transition-colors">
-          <Plus className="h-3.5 w-3.5" />
-          <span>Add Asset</span>
-        </button>
-      </div>
-
-      {/* Full-screen image dialog */}
-      <Dialog open={selectedImage !== null} onOpenChange={(open) => !open && setSelectedImage(null)}>
-        <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 bg-black border border-gray-800">
-          {selectedImage && (
-            <ImageViewer
-              src={selectedImage.src || "/placeholder.svg"}
-              alt={selectedImage.alt}
-              title={selectedImage.title}
-              onClose={() => setSelectedImage(null)}
-            />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-32 text-center p-3">
+              {activeTab === "images" ? (
+                <>
+                  <ImageIcon className="h-6 w-6 text-gray-600 mb-2" />
+                  <p className="text-[10px] text-gray-500">No saved images yet</p>
+                </>
+              ) : (
+                <>
+                  <Video className="h-6 w-6 text-gray-600 mb-2" />
+                  <p className="text-[10px] text-gray-500">No saved videos yet</p>
+                </>
+              )}
+              <p className="text-[9px] text-gray-600 mt-1">
+                {activeTab === "images" ? "Images" : "Videos"} will appear here when you generate them
+              </p>
+            </div>
           )}
+        </>
+      </div>
+
+      {/* Full-screen asset dialog */}
+      <Dialog open={selectedAsset !== null} onOpenChange={(open) => !open && setSelectedAsset(null)}>
+        <DialogContent className="bg-black/95 border border-gray-800 p-0 max-w-[90vw] max-h-[90vh] w-auto h-auto">
+          <DialogTitle className="sr-only">
+            {selectedAsset?.type === "video" ? "Video Preview" : "Image Preview"}
+          </DialogTitle>
+          <div className="w-full h-full overflow-hidden">
+            {selectedAsset && (
+              <VisualMirrorRender 
+                nodeId="preview_asset" 
+                showCompletionBadge={false}
+                showControls={true}
+                isFullscreen={true}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

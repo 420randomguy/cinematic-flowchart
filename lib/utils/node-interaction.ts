@@ -11,22 +11,10 @@ import type React from "react"
  * @param e Event object
  */
 export function preventNodeDrag(e: React.MouseEvent | React.KeyboardEvent | React.FocusEvent) {
-  // Check if the target is an input element
-  const target = e.target as HTMLElement
-  const isInputElement =
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT" ||
-    target.classList.contains("prevent-node-drag")
-
-  // Always stop propagation
+  // Stop propagation to prevent the event from triggering node drag
   e.stopPropagation()
-
-  // Only prevent default for non-input elements
-  if (!isInputElement && "preventDefault" in e) {
-    e.preventDefault()
-  }
-
+  
+  // Stop immediate propagation if available
   if ("nativeEvent" in e) {
     e.nativeEvent.stopImmediatePropagation()
   }
@@ -40,22 +28,16 @@ export function preventNodeDrag(e: React.MouseEvent | React.KeyboardEvent | Reac
  */
 export function createInteractiveProps(handleInputInteraction: (isInteracting?: boolean) => void) {
   return {
-    onMouseEnter: () => handleInputInteraction(true),
-    onMouseLeave: () => handleInputInteraction(false),
+    // Control when nodes should be draggable
     onFocus: () => handleInputInteraction(true),
     onBlur: () => handleInputInteraction(false),
-    onMouseDown: (e: React.MouseEvent) => {
-      preventNodeDrag(e)
-    },
-    onClick: (e: React.MouseEvent) => {
-      // Only stop propagation, don't prevent default
-      // This allows click handlers to work properly
-      e.stopPropagation()
-    },
+    onMouseEnter: () => handleInputInteraction(true),
+    onMouseLeave: () => handleInputInteraction(false),
+    
+    // Prevent node drag when interacting with the element
+    onMouseDown: (e: React.MouseEvent) => preventNodeDrag(e),
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
     onDoubleClick: (e: React.MouseEvent) => e.stopPropagation(),
-    onMouseMove: (e: React.MouseEvent) => e.stopPropagation(),
-    onMouseUp: (e: React.MouseEvent) => e.stopPropagation(),
-    onKeyDown: (e: React.KeyboardEvent) => e.stopPropagation(),
   }
 }
 

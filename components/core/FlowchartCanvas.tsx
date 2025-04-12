@@ -32,6 +32,7 @@ import CanvasToolbar from "@/components/controls/CanvasToolbar"
 import ImageCropModal from "@/components/modals/ImageCropModal"
 import DebugPanel from "@/components/debug/debug-panel"
 import UserProfileButton from "@/components/ui/user-profile-button"
+import AssetBoardButton from "@/components/ui/asset-board-button"
 
 // Import stores
 import { useFlowchartStore } from "@/store/useFlowchartStore"
@@ -659,6 +660,7 @@ function FlowchartCanvasInner() {
     }
   }, [setNodes])
 
+  // Simplified node drag handler - only saves state
   const handleNodeDragStart: NodeDragHandler = useCallback(
     (/*event, node*/) => {
       const { isUndoRedoing } = useFlowchartStore.getState()
@@ -667,14 +669,6 @@ function FlowchartCanvasInner() {
       }
     },
     [saveState],
-  )
-
-  const handleNodeDragStop: NodeDragHandler = useCallback(
-    (/*event, node*/) => {
-      // Ensure this is called after the node position has been updated by React Flow
-      // No explicit action needed here currently, can be used for snapping or validation later
-    },
-    [],
   )
 
   return (
@@ -720,8 +714,8 @@ function FlowchartCanvasInner() {
             nodesDraggable={!isInteractingWithInput}
             panOnDrag={!isInteractingWithInput ? [1] : false}
             onNodeDragStart={handleNodeDragStart}
-            onNodeDrag={() => { /* Placeholder: Add logic if needed, e.g., nodeMovedRef.current = true; Ensure ref is defined */ }}
-            onNodeDragStop={handleNodeDragStop}
+            onNodeDrag={() => {}} // Empty handler - no additional state tracking needed
+            onNodeDragStop={handleNodeDragStart} // Reuse the same handler to ensure state is saved
             connectOnClick={true}
             edgesFocusable={true}
             connectionMode={ConnectionMode.Loose}
@@ -730,19 +724,7 @@ function FlowchartCanvasInner() {
             className="bg-black"
           >
             <Background color="#333" gap={16} />
-
-            {/* Canvas Toolbar */}
-            <CanvasToolbar
-              onUndo={undo}
-              onRedo={redo}
-              onCopy={handleCopy}
-              onPaste={handlePaste}
-              isUndoAvailable={undoStack.length > 0}
-              isRedoAvailable={redoStack.length > 0}
-              isCopyAvailable={selectedNodeId !== null}
-              isPasteAvailable={clipboard !== null}
-            />
-
+            
             {/* Context Menu */}
             {contextMenu && (
               <CanvasContextMenu
@@ -805,11 +787,23 @@ function FlowchartCanvasInner() {
         />
       )}
 
-      {/* User Profile Button */}
-      <UserProfileButton />
+      {/* Canvas Toolbar - includes User Profile Button */}
+      <CanvasToolbar
+        onUndo={undo}
+        onRedo={redo}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+        isUndoAvailable={undoStack.length > 0}
+        isRedoAvailable={redoStack.length > 0}
+        isCopyAvailable={selectedNodeId !== null}
+        isPasteAvailable={clipboard !== null}
+      />
 
       {/* Debug Panel */}
       <DebugPanel />
+      
+      {/* Asset Board Button */}
+      <AssetBoardButton />
     </div>
   )
 }

@@ -10,9 +10,9 @@ interface SettingsSectionProps {
   children?: ReactNode
   className?: string
   title?: string
-  quality?: number
+  slider?: number
   setQuality?: (quality: number) => void
-  seed?: string | number
+  numbers?: string | number
   strength?: number
   setStrength?: (strength: number) => void
   showSizeSelector?: boolean
@@ -23,9 +23,9 @@ function SettingsSectionComponent({
   children,
   className = "",
   title = "SETTINGS",
-  quality,
+  slider,
   setQuality,
-  seed,
+  numbers,
   strength,
   setStrength,
   showSizeSelector = false,
@@ -39,14 +39,14 @@ function SettingsSectionComponent({
     <div className={`border-t border-gray-800/50 pt-2 pb-1 ${className}`}>
       <div className="text-[9px] uppercase text-gray-500 tracking-wide mb-1.5">{title}</div>
 
-      {quality !== undefined && setQuality && (
+      {slider !== undefined && setQuality && (
         <div className="space-y-1 mb-2">
           <div className="flex justify-between items-center">
-            <div className="text-[9px] uppercase text-gray-500 tracking-wide">QUALITY</div>
-            <div className="text-[9px] text-gray-400">{quality}</div>
+            <div className="text-[9px] uppercase text-gray-500 tracking-wide">SLIDER</div>
+            <div className="text-[9px] text-gray-400">{slider}</div>
           </div>
           <Slider
-            value={[quality]}
+            value={[slider]}
             min={1}
             max={100}
             step={1}
@@ -75,16 +75,16 @@ function SettingsSectionComponent({
         </div>
       )}
 
-      {seed !== undefined && (
+      {numbers !== undefined && (
         <div className="flex justify-between items-center mb-2">
-          <div className="text-[9px] uppercase text-gray-500 tracking-wide">SEED</div>
-          <div className="text-[9px] text-gray-400 font-mono">{seed}</div>
+          <div className="text-[9px] uppercase text-gray-500 tracking-wide">NUMBERS</div>
+          <div className="text-[9px] text-gray-400 font-mono">{numbers}</div>
         </div>
       )}
 
       {showSizeSelector && (
         <div className="flex justify-between items-center mb-2">
-          <div className="text-[9px] uppercase text-gray-500 tracking-wide">SIZE</div>
+          <div className="text-[9px] uppercase text-gray-500 tracking-wide">SELECTDROP</div>
           <Select defaultValue={defaultSize}>
             <SelectTrigger
               className="h-5 w-[60px] bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0"

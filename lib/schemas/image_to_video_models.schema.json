@@ -1,6 +1,56 @@
 {
   "models": [
     {
+      "name": "Wan 2.1",
+      "id": "wan-2.1",
+      "api_documentation": "https://fal.ai/models/fal-ai/wan-i2v/image-to-video/api",
+      "description": "Latest version of Wan with enhanced motion quality and improved scene diversity.",
+      "settings": {
+        "resolution": ["480p", "720p", "1080p"],
+        "duration_seconds": {
+          "type": "integer",
+          "min": 1,
+          "max": 10,
+          "default": 4
+        },
+        "frame_rate": {
+          "type": "integer",
+          "min": 24,
+          "max": 60,
+          "default": 30
+        },
+        "motion_intensity": ["low", "medium", "high"]
+      }
+    },
+    {
+      "name": "Wan 2.1 Lora",
+      "id": "wan-2.1-lora",
+      "api_documentation": "https://fal.ai/models/fal-ai/wan-i2v/image-to-video/api",
+      "description": "Wan 2.1 with fine-tuned Lora adaptations for specific visual styles and motion patterns.",
+      "settings": {
+        "resolution": ["480p", "720p", "1080p"],
+        "duration_seconds": {
+          "type": "integer",
+          "min": 1,
+          "max": 10,
+          "default": 4
+        },
+        "frame_rate": {
+          "type": "integer",
+          "min": 24,
+          "max": 60,
+          "default": 30
+        },
+        "motion_intensity": ["low", "medium", "high"],
+        "lora_strength": {
+          "type": "integer",
+          "min": 1,
+          "max": 100,
+          "default": 75
+        }
+      }
+    },
+    {
       "name": "WAN Pro",
       "id": "wan-pro",
       "api_documentation": "https://fal.ai/models/fal-ai/wan-i2v/image-to-video/api",
@@ -23,7 +73,7 @@
       }
     },
     {
-      "name": "Kling AI 1.6 Pro",
+      "name": "Klingai",
       "id": "kling-1.6",
       "api_documentation": "https://docs.aimlapi.com/api-references/video-models/kling-ai/v1.6-standart-image-to-video",
       "description": "High-quality video generation model emphasizing visual quality and accurate prompt adherence.",
@@ -45,7 +95,7 @@
       }
     },
     {
-      "name": "v02 (Google's Image-to-Video Model)",
+      "name": "Veo2",
       "id": "veo2",
       "api_documentation": "https://fal.ai/models?categories=image-to-video",
       "description": "Creates high-quality, coherent videos directly from images with Google's advanced image-to-video techniques.",
@@ -58,23 +108,6 @@
           "default": 4
         },
         "frame_interpolation": [true, false]
-      }
-    },
-    {
-      "name": "Hunyuan",
-      "id": "hunyuan",
-      "api_documentation": "https://cloud.tencent.com/document/product/1729",
-      "description": "Tencent's advanced image-to-video model with strong capabilities for natural motion and scene extension.",
-      "settings": {
-        "resolution": ["720p", "1080p"],
-        "duration_seconds": {
-          "type": "integer",
-          "min": 2,
-          "max": 12,
-          "default": 6
-        },
-        "style": ["realistic", "stylized", "anime"],
-        "motion_strength": ["subtle", "moderate", "dynamic"]
       }
     }
   ]

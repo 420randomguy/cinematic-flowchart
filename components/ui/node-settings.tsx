@@ -1,7 +1,6 @@
 "use client"
 
 import { memo, useRef, useState, useEffect } from "react"
-import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createInteractiveProps } from "@/lib/utils/node-interaction"
 import { useFlowchartStore } from "@/store/useFlowchartStore"
@@ -40,51 +39,63 @@ function NodeSettingsComponent({
   // Use refs to track previous values for memoization
   const prevSliderRef = useRef<number>(slider ?? 0)
   const prevStrengthRef = useRef(strength)
-  const prevNumbersRef = useRef<string | number>(numbers ?? "0")
+  const prevNumbersRef = useRef<string | number>(numbers ?? "")
   const prevModelIdRef = useRef(selectedModelId)
   
   // State for the numbers input field
-  const [numbersInput, setNumbersInput] = useState<string>(String(numbers ?? "0"))
+  const [numbersInput, setNumbersInput] = useState<string>('')
 
   // Update local state when numbers prop changes
   useEffect(() => {
     if (numbers !== undefined && String(numbers) !== numbersInput) {
       setNumbersInput(String(numbers));
     }
-  }, [numbers, numbersInput]);
+  }, [numbers]);
 
   // Only update refs when values actually change
   if (slider !== prevSliderRef.current) prevSliderRef.current = slider ?? 0
   if (strength !== prevStrengthRef.current) prevStrengthRef.current = strength
-  if (numbers !== prevNumbersRef.current) prevNumbersRef.current = numbers ?? "0"
+  if (numbers !== prevNumbersRef.current) prevNumbersRef.current = numbers ?? ""
   if (selectedModelId !== prevModelIdRef.current) prevModelIdRef.current = selectedModelId
 
   // Handle numbers input change
   const handleNumbersChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     
-    // Only allow numeric input (including empty string for backspace)
-    if (value === '' || /^[0-9]+$/.test(value)) {
+    // Allow empty value (for deleting) and numeric values
+    if (value === '' || /^\d*$/.test(value)) {
       setNumbersInput(value);
       
-      // Update the actual value if we have a setter function
+      // Update the parent component
       if (setNumbers) {
-        if (value === '') {
-          // For empty values, don't update yet until blur
-          // This allows for proper deletion workflow
-        } else {
-          setNumbers(value);
-        }
+        setNumbers(value === '' ? '' : value);
       }
     }
   };
 
-  // Handle input blur to ensure empty values are replaced with "0"
+  // Handle numbers input blur
   const handleNumbersBlur = () => {
+    handleInputInteraction(false);
+    
+    // If empty on blur, set to empty string
     if (numbersInput === '' && setNumbers) {
-      const defaultValue = "0";
-      setNumbersInput(defaultValue);
-      setNumbers(defaultValue);
+      setNumbers('');
+    }
+  };
+
+  // Handle paste event for numbers input
+  const handleNumbersPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    
+    // Get pasted content
+    const pastedText = e.clipboardData.getData('text');
+    
+    // Only allow numeric content to be pasted
+    if (/^\d*$/.test(pastedText)) {
+      // Let the default paste happen
+    } else {
+      // Prevent default paste for non-numeric content
+      e.preventDefault();
     }
   };
 
@@ -93,38 +104,21 @@ function NodeSettingsComponent({
       {/* Section heading */}
       <div className="text-[9px] uppercase text-gray-500 tracking-wide font-bold mb-2">MODEL SETTINGS</div>
 
-      {/* Slider (formerly Quality) */}
-      <div className="flex justify-between items-center">
-        <div className="text-[9px] uppercase text-gray-500 tracking-wide">SLIDER</div>
-        <div className="text-[9px] text-gray-400">{prevSliderRef.current}</div>
-      </div>
-      <Slider
-        value={[typeof prevSliderRef.current === 'number' ? prevSliderRef.current : 0]}
-        min={1}
-        max={100}
-        step={1}
-        onValueChange={(value) => setQuality(value[0])}
-        className="w-full h-1.5"
-        {...interactiveProps}
-      />
-
-      {/* Numbers field (formerly Seed) - Now as an editable input */}
+      {/* Numbers field */}
       <div className="flex justify-between items-center pt-1">
         <div className="text-[9px] uppercase text-gray-500 tracking-wide">NUMBERS</div>
         <Input
           type="text"
           value={numbersInput}
           onChange={handleNumbersChange}
-          onBlur={(e) => {
-            handleNumbersBlur();
-            handleInputInteraction(false);
-          }}
+          onBlur={handleNumbersBlur}
           onFocus={(e) => {
             handleInputInteraction(true);
-            e.target.select();
           }}
+          onPaste={handleNumbersPaste}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
           className="h-5 w-24 bg-gray-800/30 border-gray-800 text-[9px] text-gray-300 rounded-sm px-2 py-0 font-mono text-right focus:ring-0 focus:outline-none focus:border-gray-700 focus:shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
         />
       </div>

@@ -28,10 +28,14 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
     handleModelChange,
     modelSettings,
     handleSettingsChange,
+    negativePrompt,
+    handleNegativePromptChange,
+    loraUrls,
+    handleLoraUrlsChange,
   } = useNodeState({
     id,
     data,
-    initialModelId: "wan-2.1",
+    initialModelId: "flux-dev",
   })
 
   // Determine the text content to display directly from props.data
@@ -102,6 +106,10 @@ function TextToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>) 
           modelSettings,
           handleModelChange,
           handleSettingsChange,
+          negativePrompt,
+          onNegativePromptChange: handleNegativePromptChange,
+          loraUrls,
+          onLoraUrlsChange: handleLoraUrlsChange,
         }}
       >
         {isSubmitting ? (

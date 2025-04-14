@@ -3,4 +3,16 @@ description:
 globs: 
 alwaysApply: false
 ---
- 
+# Git Operations Rules
+
+## Force Push Only
+- NEVER attempt to merge, rebase, or integrate remote changes with local changes
+- ALWAYS force push local changes to replace remote completely when instructed
+- DO NOT try to resolve conflicts between local and remote
+- DO NOT perform git pull or git pull --rebase operations
+- WHEN pushing to remote, use `git push -f` to force replace remote content
+
+## Repository Cleaning
+- When instructed to "clean" the repository, IMMEDIATELY force push local version
+- DO NOT suggest or attempt conflict resolution
+- The local version is ALWAYS considered the correct version 

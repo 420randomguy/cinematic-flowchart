@@ -48,10 +48,14 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
     handleModelChange,
     modelSettings,
     handleSettingsChange,
+    negativePrompt,
+    handleNegativePromptChange,
+    loraUrls,
+    handleLoraUrlsChange,
   } = useNodeState({
     id,
     data,
-    initialModelId: "wan-2.1",
+    initialModelId: "flux-dev",
   })
 
   // Use our consolidated image handling hook
@@ -147,6 +151,10 @@ function ImageToVideoNode({ data, isConnectable, id }: NodeProps<VideoNodeData>)
           modelSettings,
           handleModelChange,
           handleSettingsChange,
+          negativePrompt,
+          onNegativePromptChange: handleNegativePromptChange,
+          loraUrls,
+          onLoraUrlsChange: handleLoraUrlsChange,
         }}
       >
         {isSubmitting ? (

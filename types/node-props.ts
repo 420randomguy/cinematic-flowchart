@@ -85,6 +85,14 @@ export interface NodeSettingsProps {
   handleModelChange?: (modelId: string) => void
   handleSettingsChange?: (settings: Record<string, any>) => void
 
+  // Negative prompt settings
+  negativePrompt?: string
+  onNegativePromptChange?: (text: string) => void
+
+  // Lora model URL settings
+  loraUrls?: string[]
+  onLoraUrlsChange?: (urls: string[]) => void
+
   // Additional props
   data?: any
   showSizeSelector?: boolean

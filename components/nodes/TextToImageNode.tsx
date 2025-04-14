@@ -32,6 +32,10 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
     handleModelChange,
     modelSettings,
     handleSettingsChange,
+    negativePrompt,
+    handleNegativePromptChange,
+    loraUrls,
+    handleLoraUrlsChange,
   } = useNodeState({
     id,
     data,
@@ -103,6 +107,10 @@ function TextToImageNode({ data, isConnectable, id }: NodeProps<ImageNodeData>) 
           modelSettings,
           handleModelChange,
           handleSettingsChange,
+          negativePrompt,
+          onNegativePromptChange: handleNegativePromptChange,
+          loraUrls,
+          onLoraUrlsChange: handleLoraUrlsChange,
         }}
       >
         {isSubmitting ? (

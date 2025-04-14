@@ -6,6 +6,7 @@ alwaysApply: true
 # Next.js Frontend Rules
 
 ## Data Flow vs Rendering
+- DO NOT OVERENGINEER MY CODE. CHECK IF SOLUION EXISTS AND PROPOSE TO USE THAT. SIMPLE SOLUTIONS ONLY
 - React Flow should only handle data flow and absolute necessary elements of the app that cannot be rendered otherwise
 - Visualmirror tech should handle ALL rendering of the app and only fall back to React if absolutely necessary
 

@@ -35,7 +35,9 @@ export function nodeSettingsComparison(prevProps: any, nextProps: any) {
     prevProps.seed === nextProps.seed &&
     prevProps.strength === nextProps.strength &&
     prevProps.selectedModelId === nextProps.selectedModelId &&
-    JSON.stringify(prevProps.modelSettings || {}) === JSON.stringify(nextProps.modelSettings || {})
+    JSON.stringify(prevProps.modelSettings || {}) === JSON.stringify(nextProps.modelSettings || {}) &&
+    prevProps.negativePrompt === nextProps.negativePrompt &&
+    JSON.stringify(prevProps.loraUrls || []) === JSON.stringify(nextProps.loraUrls || [])
   )
 }
 

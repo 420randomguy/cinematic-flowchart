@@ -45,6 +45,8 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     seed,
     numbers,
     setNumbers,
+    strength,
+    setStrength,
     isSubmitting,
     isGenerated,
     timeRemaining,
@@ -53,6 +55,10 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
     handleModelChange,
     modelSettings,
     handleSettingsChange,
+    negativePrompt,
+    handleNegativePromptChange,
+    loraUrls,
+    handleLoraUrlsChange,
   } = useNodeState({
     id,
     data,
@@ -144,10 +150,16 @@ function ImageToImageNode({ data, isConnectable, id }: NodeProps<ImageToImageNod
             setQuality,
             numbers,
             setNumbers,
+            strength,
+            setStrength,
             selectedModelId,
             modelSettings,
             handleModelChange,
             handleSettingsChange,
+            negativePrompt,
+            onNegativePromptChange: handleNegativePromptChange,
+            loraUrls,
+            onLoraUrlsChange: handleLoraUrlsChange,
           }}
         >
           {isSubmitting ? (
